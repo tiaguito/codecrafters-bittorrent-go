@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/codecrafters-io/bittorrent-starter-go/torrentfile"
 	bencode "github.com/jackpal/bencode-go"
 )
 
@@ -27,6 +28,15 @@ func main() {
 			return
 		}
 		fmt.Println(string(jsonOutput))
+	} else if command == "info" {
+		filePath := os.Args[2]
+		bto, err := torrentfile.Open(filePath)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Printf("Tracker URL: %s\n", bto.Announce)
+		fmt.Printf("Piece Length: %d\n", bto.Info.Length)
 	} else {
 		fmt.Println("Unknown command: " + command)
 		os.Exit(1)

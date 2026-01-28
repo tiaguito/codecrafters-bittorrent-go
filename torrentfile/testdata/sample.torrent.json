@@ -1,0 +1,9 @@
+{
+    "Announce": "http://bittorrent-test-tracker.codecrafters.io/announce",
+    "Info": {
+        "Name": "",
+        "Length": 92063,
+        "Pieces": "",
+        "PieceLength": 0
+    }
+}
