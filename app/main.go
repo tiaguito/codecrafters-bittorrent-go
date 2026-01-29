@@ -36,13 +36,23 @@ func main() {
 			return
 		}
 		fmt.Printf("Tracker URL: %s\n", bto.Announce)
-		fmt.Printf("Piece Length: %d\n", bto.Info.Length)
+		fmt.Printf("Length: %d\n", bto.Info.Length)
 		hash, err := bto.Info.Hash()
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
 		fmt.Printf("Info Hash: %x\n", hash)
+		fmt.Printf("Piece Length: %d\n", bto.Info.PieceLength)
+		fmt.Println("Piece Hashes:")
+		hashes, err := bto.Info.SplitPieces()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		for _, hash := range hashes {
+			fmt.Printf("%x\n", hash)
+		}
 	} else {
 		fmt.Println("Unknown command: " + command)
 		os.Exit(1)
