@@ -30,27 +30,17 @@ func main() {
 		fmt.Println(string(jsonOutput))
 	} else if command == "info" {
 		filePath := os.Args[2]
-		bto, err := torrentfile.Open(filePath)
+		tf, err := torrentfile.Open(filePath)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		fmt.Printf("Tracker URL: %s\n", bto.Announce)
-		fmt.Printf("Length: %d\n", bto.Info.Length)
-		hash, err := bto.Info.Hash()
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		fmt.Printf("Info Hash: %x\n", hash)
-		fmt.Printf("Piece Length: %d\n", bto.Info.PieceLength)
+		fmt.Printf("Tracker URL: %s\n", tf.Announce)
+		fmt.Printf("Length: %d\n", tf.Length)
+		fmt.Printf("Info Hash: %x\n", tf.InfoHash)
+		fmt.Printf("Piece Length: %d\n", tf.PieceLength)
 		fmt.Println("Piece Hashes:")
-		hashes, err := bto.Info.SplitPieces()
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		for _, hash := range hashes {
+		for _, hash := range tf.PieceHashes {
 			fmt.Printf("%x\n", hash)
 		}
 	} else {
