@@ -2,7 +2,6 @@ package torrentfile
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"testing"
 
@@ -11,18 +10,16 @@ import (
 )
 
 func TestOpen(t *testing.T) {
-	torrent, err := Open("../sample.torrent")
+	torrenFile, err := Open("../sample.torrent")
 	require.Nil(t, err)
 
 	goldenPath := "testdata/sample.torrent.json"
 
-	expected := bencodeTorrent{}
+	expected := TorrentFile{}
 	golden, err := os.ReadFile(goldenPath)
 	require.Nil(t, err)
 	err = json.Unmarshal(golden, &expected)
-	fmt.Println(expected)
 	require.Nil(t, err)
 
-	assert.Equal(t, expected.Announce, torrent.Announce)
-	assert.Equal(t, expected.Info.Length, torrent.Info.Length)
+	assert.Equal(t, expected, torrenFile)
 }
