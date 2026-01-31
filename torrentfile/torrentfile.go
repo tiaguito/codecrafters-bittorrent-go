@@ -9,10 +9,12 @@ import (
 	"github.com/jackpal/bencode-go"
 )
 
+const hashLen int = 20
+
 type TorrentFile struct {
 	Announce    string
-	InfoHash    [20]byte
-	PieceHashes [][20]byte
+	InfoHash    [hashLen]byte
+	PieceHashes [][hashLen]byte
 	PieceLength int
 	Length      int
 	Name        string
@@ -45,18 +47,18 @@ func Open(path string) (TorrentFile, error) {
 	return bto.toTorrentFile()
 }
 
-func (i *bencodeInfo) hash() ([20]byte, error) {
+func (i *bencodeInfo) hash() ([hashLen]byte, error) {
 	var buf bytes.Buffer
 	err := bencode.Marshal(&buf, *i)
 	if err != nil {
-		return [20]byte{}, err
+		return [hashLen]byte{}, err
 	}
 	h := sha1.Sum(buf.Bytes())
 	return h, nil
 }
 
-func (i *bencodeInfo) splitPieceHashes() ([][20]byte, error) {
-	hashLen := 20
+func (i *bencodeInfo) splitPieceHashes() ([][hashLen]byte, error) {
+	hashLen := hashLen
 	buf := []byte(i.Pieces)
 
 	if len(buf)%hashLen != 0 {

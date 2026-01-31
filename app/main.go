@@ -1,10 +1,11 @@
 package main
 
 import (
+	"bytes"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/codecrafters-io/bittorrent-starter-go/torrentfile"
 	bencode "github.com/jackpal/bencode-go"
@@ -14,7 +15,7 @@ func main() {
 	command := os.Args[1]
 
 	if command == "decode" {
-		bencodedValue := strings.NewReader(os.Args[2])
+		bencodedValue := bytes.NewReader([]byte(os.Args[2]))
 
 		decoded, err := bencode.Decode(bencodedValue)
 		if err != nil {
@@ -43,6 +44,26 @@ func main() {
 		for _, hash := range tf.PieceHashes {
 			fmt.Printf("%x\n", hash)
 		}
+	} else if command == "peers" {
+		filepath := os.Args[2]
+		tf, err := torrentfile.Open(filepath)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		var peerID [20]byte
+		_, err = rand.Read(peerID[:])
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		peers, err := tf.DiscoverPeers(peerID, 6881)
+		for _, peer := range peers {
+			fmt.Println(peer)
+		}
+
 	} else {
 		fmt.Println("Unknown command: " + command)
 		os.Exit(1)
