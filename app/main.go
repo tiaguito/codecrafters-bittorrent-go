@@ -2,12 +2,12 @@ package main
 
 import (
 	"bytes"
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"os"
 
 	"github.com/codecrafters-io/bittorrent-starter-go/torrentfile"
+	"github.com/codecrafters-io/bittorrent-starter-go/utils"
 	bencode "github.com/jackpal/bencode-go"
 )
 
@@ -45,10 +45,9 @@ func main() {
 			return
 		}
 
-		var peerID [20]byte
-		_, err = rand.Read(peerID[:])
+		peerID, err := utils.GeneratePeerID()
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("error generating peer ID: %w", err)
 			return
 		}
 
@@ -56,7 +55,6 @@ func main() {
 		for _, peer := range peers {
 			fmt.Println(peer)
 		}
-
 	} else {
 		fmt.Println("Unknown command: " + command)
 		os.Exit(1)
