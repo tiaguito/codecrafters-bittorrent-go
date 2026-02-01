@@ -59,7 +59,7 @@ func main() {
 			return
 		}
 
-		peers, err := tf.DiscoverPeers(peerID, 6881)
+		peers, err := tf.DiscoverPeers(peerID, torrentfile.PORT)
 		for _, peer := range peers {
 			fmt.Println(peer)
 		}

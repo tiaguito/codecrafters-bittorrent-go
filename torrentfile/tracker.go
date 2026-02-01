@@ -10,12 +10,14 @@ import (
 	"github.com/jackpal/bencode-go"
 )
 
+const PORT uint16 = 6881
+
 type bencodeTrackerResponse struct {
 	Interval int    `bencode:"interval"`
 	Peers    string `bencode:"string"`
 }
 
-func (t *TorrentFile) buildTrackerUrl(peerID [20]byte, port uint16) (string, error) {
+func (t *TorrentFile) buildTrackerURL(peerID [20]byte, port uint16) (string, error) {
 	base, err := url.Parse(t.Announce)
 	if err != nil {
 		return "", err
@@ -36,7 +38,7 @@ func (t *TorrentFile) buildTrackerUrl(peerID [20]byte, port uint16) (string, err
 }
 
 func (t *TorrentFile) DiscoverPeers(peerID [20]byte, port uint16) ([]peers.Peer, error) {
-	url, err := t.buildTrackerUrl(peerID, port)
+	url, err := t.buildTrackerURL(peerID, port)
 	if err != nil {
 		return nil, err
 	}
