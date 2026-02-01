@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/codecrafters-io/bittorrent-starter-go/peers"
+	"github.com/codecrafters-io/bittorrent-starter-go/internal/peers"
 	"github.com/stretchr/testify/assert"
 )
 

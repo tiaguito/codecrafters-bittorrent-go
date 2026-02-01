@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/codecrafters-io/bittorrent-starter-go/torrentfile"
-	"github.com/codecrafters-io/bittorrent-starter-go/utils"
+	"github.com/codecrafters-io/bittorrent-starter-go/internal/torrentfile"
+	"github.com/codecrafters-io/bittorrent-starter-go/internal/utils"
 	bencode "github.com/jackpal/bencode-go"
 )
 

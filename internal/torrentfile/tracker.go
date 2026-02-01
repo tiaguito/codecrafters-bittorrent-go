@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/codecrafters-io/bittorrent-starter-go/peers"
+	"github.com/codecrafters-io/bittorrent-starter-go/internal/peers"
 	"github.com/jackpal/bencode-go"
 )
 

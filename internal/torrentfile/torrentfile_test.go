@@ -10,7 +10,7 @@ import (
 )
 
 func TestOpen(t *testing.T) {
-	torrenFile, err := Open("../sample.torrent")
+	torrenFile, err := Open("../../sample.torrent")
 	require.Nil(t, err)
 
 	goldenPath := "testdata/sample.torrent.json"
