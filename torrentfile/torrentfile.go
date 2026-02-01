@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/jackpal/bencode-go"
 )
@@ -91,4 +92,18 @@ func (bto *bencodeTorrent) toTorrentFile() (TorrentFile, error) {
 		Name:        bto.Info.Name,
 	}
 	return t, nil
+}
+
+func (t TorrentFile) String() string {
+	var str []string
+	str = append(str, fmt.Sprintf("Tracker URL: %s", t.Announce))
+	str = append(str, fmt.Sprintf("Length: %d", t.Length))
+	str = append(str, fmt.Sprintf("Info Hash: %x", t.InfoHash))
+	str = append(str, fmt.Sprintf("Piece Length: %d", t.PieceLength))
+	str = append(str, fmt.Sprint("Piece Hashes:"))
+	for _, hash := range t.PieceHashes {
+		str = append(str, fmt.Sprintf("%x", hash))
+	}
+
+	return strings.Join(str, "\n")
 }

@@ -36,14 +36,7 @@ func main() {
 			fmt.Println(err)
 			return
 		}
-		fmt.Printf("Tracker URL: %s\n", tf.Announce)
-		fmt.Printf("Length: %d\n", tf.Length)
-		fmt.Printf("Info Hash: %x\n", tf.InfoHash)
-		fmt.Printf("Piece Length: %d\n", tf.PieceLength)
-		fmt.Println("Piece Hashes:")
-		for _, hash := range tf.PieceHashes {
-			fmt.Printf("%x\n", hash)
-		}
+		fmt.Println(tf)
 	} else if command == "peers" {
 		filepath := os.Args[2]
 		tf, err := torrentfile.Open(filepath)
