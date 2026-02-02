@@ -12,18 +12,18 @@ import (
 	bencode "github.com/jackpal/bencode-go"
 )
 
-type Client struct {
+type Cmd struct {
 	out io.Writer
 }
 
-func NewClient(out io.Writer) *Client {
+func NewCmd(out io.Writer) *Cmd {
 	if out == nil {
 		out = os.Stdout
 	}
-	return &Client{out: out}
+	return &Cmd{out: out}
 }
 
-func (c *Client) Execute(args []string) error {
+func (c *Cmd) Execute(args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("usage: <command> <argument>")
 	}
@@ -37,13 +37,13 @@ func (c *Client) Execute(args []string) error {
 	return handler(c, args[1:])
 }
 
-var commandHandlers = map[string]func(*Client, []string) error{
+var commandHandlers = map[string]func(*Cmd, []string) error{
 	"decode": decodeCommand,
 	"info":   infoCommand,
 	"peers":  peersCommand,
 }
 
-func decodeCommand(c *Client, args []string) error {
+func decodeCommand(c *Cmd, args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("usage: decode <bencoded string>")
 	}
@@ -57,7 +57,7 @@ func decodeCommand(c *Client, args []string) error {
 	return json.NewEncoder(c.out).Encode(decoded)
 }
 
-func infoCommand(c *Client, args []string) error {
+func infoCommand(c *Cmd, args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("usage: info <torrent file>")
 	}
@@ -66,12 +66,12 @@ func infoCommand(c *Client, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create torrent: %w", err)
 	}
-	fmt.Println(tf)
+	fmt.Fprintln(c.out, tf)
 
 	return nil
 }
 
-func peersCommand(c *Client, args []string) error {
+func peersCommand(c *Cmd, args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("usage: peers <torrent file>")
 	}
@@ -88,14 +88,14 @@ func peersCommand(c *Client, args []string) error {
 
 	peers, err := tf.DiscoverPeers(peerID, torrentfile.PORT)
 	for _, peer := range peers {
-		fmt.Println(peer)
+		fmt.Fprintln(c.out, peer)
 	}
 
 	return nil
 }
 
 func main() {
-	client := NewClient(nil)
+	client := NewCmd(nil)
 	if err := client.Execute(os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, "Error:", err)
 		os.Exit(1)
