@@ -212,7 +212,7 @@ func downloadPieceCommand(c *Cmd, args []string) error {
 	}
 
 	if m.ID != messages.MsgUnchoke {
-		return fmt.Errorf("expected unchoke but got ID %s", m.ID)
+		return fmt.Errorf("expected unchoke but got ID %d", m.ID)
 	}
 
 	fmt.Fprintln(c.out, m)
@@ -266,7 +266,7 @@ func downloadPieceCommand(c *Cmd, args []string) error {
 		}
 
 		if m.ID != messages.MsgPiece {
-			return fmt.Errorf("expected piece but got ID %s", m.ID)
+			return fmt.Errorf("expected piece but got ID %d", m.ID)
 		}
 
 		fmt.Fprintln(c.out, m)
