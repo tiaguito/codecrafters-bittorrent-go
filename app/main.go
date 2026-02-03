@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"os"
 
+	"github.com/codecrafters-io/bittorrent-starter-go/internal/handshake"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/torrentfile"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/utils"
 	bencode "github.com/jackpal/bencode-go"
@@ -38,9 +40,10 @@ func (c *Cmd) Execute(args []string) error {
 }
 
 var commandHandlers = map[string]func(*Cmd, []string) error{
-	"decode": decodeCommand,
-	"info":   infoCommand,
-	"peers":  peersCommand,
+	"decode":    decodeCommand,
+	"info":      infoCommand,
+	"peers":     peersCommand,
+	"handshake": handshakeCommand,
 }
 
 func decodeCommand(c *Cmd, args []string) error {
@@ -94,9 +97,45 @@ func peersCommand(c *Cmd, args []string) error {
 	return nil
 }
 
+func handshakeCommand(c *Cmd, args []string) error {
+	if len(args) < 2 {
+		return fmt.Errorf("usage: handshake <torrent file> <peer_ip>:<peer_port>")
+	}
+	tf, err := torrentfile.Open(args[0])
+	if err != nil {
+		return fmt.Errorf("failed to create torrent: %w", err)
+	}
+
+	conn, err := net.Dial("tcp", args[1])
+	if err != nil {
+		return fmt.Errorf("failed to connect to peer: %w", err)
+	}
+	defer conn.Close()
+
+	peerID, err := utils.GeneratePeerID()
+	if err != nil {
+		return fmt.Errorf("failed to generate peer ID: %w", err)
+	}
+
+	h := handshake.New(tf.InfoHash, peerID)
+
+	_, err = conn.Write(h.Serialize())
+	if err != nil {
+		return fmt.Errorf("failed to send handshake request: %w", err)
+	}
+
+	res, err := handshake.Read(conn)
+	if err != nil {
+		return fmt.Errorf("failed to read handshake response: %w", err)
+	}
+
+	fmt.Fprintf(c.out, "Peer ID: %x\n", res.PeerID)
+	return nil
+}
+
 func main() {
-	client := NewCmd(nil)
-	if err := client.Execute(os.Args[1:]); err != nil {
+	cmd := NewCmd(nil)
+	if err := cmd.Execute(os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, "Error:", err)
 		os.Exit(1)
 	}
