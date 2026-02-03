@@ -2,13 +2,18 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha1"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"os"
+	"strconv"
 
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/handshake"
+	"github.com/codecrafters-io/bittorrent-starter-go/internal/messages"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/torrentfile"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/utils"
 	bencode "github.com/jackpal/bencode-go"
@@ -40,10 +45,11 @@ func (c *Cmd) Execute(args []string) error {
 }
 
 var commandHandlers = map[string]func(*Cmd, []string) error{
-	"decode":    decodeCommand,
-	"info":      infoCommand,
-	"peers":     peersCommand,
-	"handshake": handshakeCommand,
+	"decode":         decodeCommand,
+	"info":           infoCommand,
+	"peers":          peersCommand,
+	"handshake":      handshakeCommand,
+	"download_piece": downloadPieceCommand,
 }
 
 func decodeCommand(c *Cmd, args []string) error {
@@ -130,6 +136,163 @@ func handshakeCommand(c *Cmd, args []string) error {
 	}
 
 	fmt.Fprintf(c.out, "Peer ID: %x\n", res.PeerID)
+	return nil
+}
+
+func downloadPieceCommand(c *Cmd, args []string) error {
+	if len(args) < 4 {
+		return fmt.Errorf("usage: download_piece -o <piece destination path> <torrent file> <piece index>")
+	}
+
+	tf, err := torrentfile.Open(args[2])
+	if err != nil {
+		return fmt.Errorf("failed to create torrent: %w", err)
+	}
+
+	peerID, err := utils.GeneratePeerID()
+	if err != nil {
+		return fmt.Errorf("failed to generate peer ID: %w", err)
+	}
+
+	peers, err := tf.DiscoverPeers(peerID, torrentfile.PORT)
+	if err != nil {
+		return fmt.Errorf("failed to get peers: %w", err)
+	}
+
+	conn, err := net.Dial("tcp", peers[0].String())
+	if err != nil {
+		return fmt.Errorf("failed to connect to peer: %w", err)
+	}
+	defer conn.Close()
+
+	h := handshake.New(tf.InfoHash, peerID)
+
+	_, err = conn.Write(h.Serialize())
+	if err != nil {
+		return fmt.Errorf("failed to send handshake request: %w", err)
+	}
+
+	_, err = handshake.Read(conn)
+	if err != nil {
+		return fmt.Errorf("failed to read handshake response: %w", err)
+	}
+
+	/* peer messages */
+	// 1. receive bitfield
+	m, err := messages.Read(conn)
+	if err != nil {
+		return fmt.Errorf("failed to read bitfield message: %w", err)
+	}
+
+	if m == nil {
+		return fmt.Errorf("expected bitfield but got %s", m)
+	}
+
+	if m.ID != messages.MsgBitfield {
+		return fmt.Errorf("expected bitfield but got ID %d", m.ID)
+	}
+
+	fmt.Fprintln(c.out, m)
+
+	// 2. send interested
+	m = &messages.Message{ID: messages.MsgInterested}
+	_, err = conn.Write(m.Serialize())
+	if err != nil {
+		return fmt.Errorf("failed to send interested message: %w", err)
+	}
+
+	// 3. wait until receive unchoke
+	m, err = messages.Read(conn)
+	if err != nil {
+		return fmt.Errorf("failed to read unchoke message: %w", err)
+	}
+
+	if m == nil {
+		return fmt.Errorf("expected unchoke but got %s", m)
+	}
+
+	if m.ID != messages.MsgUnchoke {
+		return fmt.Errorf("expected unchoke but got ID %s", m.ID)
+	}
+
+	fmt.Fprintln(c.out, m)
+
+	// 4
+	// 4.1 break the piece into blocks of 16 kiB (blockSize)
+	pieceLength := tf.PieceLength
+	pieceCount := int(math.Ceil(float64(float64(tf.Length) / float64(tf.PieceLength))))
+	index, err := strconv.Atoi(args[3])
+	if err != nil {
+		return fmt.Errorf("failed to convert index: %w", err)
+	}
+	if index == pieceCount-1 {
+		pieceLength = tf.Length % tf.PieceLength
+	}
+
+	const blockSize int = 16 * 1024
+	blocks := int(math.Ceil(float64(pieceLength) / float64(blockSize)))
+
+	// 4.2 send a request message for each block
+	// 5. Wait for piece message for each requested block
+	var data []byte
+	for block := 0; block < blocks; block++ {
+		blockLength := blockSize
+		if block == blocks-1 {
+			blockLength = pieceLength - ((blocks - 1) * (blockSize))
+		}
+
+		payload := make([]byte, 12)
+		binary.BigEndian.PutUint32(payload[0:4], uint32(index))
+		binary.BigEndian.PutUint32(payload[4:8], uint32(block*blockSize))
+		binary.BigEndian.PutUint32(payload[8:12], uint32(blockLength))
+
+		m = &messages.Message{
+			ID:      messages.MsgRequest,
+			Payload: payload,
+		}
+
+		_, err = conn.Write(m.Serialize())
+		if err != nil {
+			return fmt.Errorf("failed to send request message: %w", err)
+		}
+
+		m, err := messages.Read(conn)
+		if err != nil {
+			return fmt.Errorf("failed to read request response message: %w", err)
+		}
+
+		if m == nil {
+			return fmt.Errorf("expected piece but got %s", m)
+		}
+
+		if m.ID != messages.MsgPiece {
+			return fmt.Errorf("expected piece but got ID %s", m.ID)
+		}
+
+		fmt.Fprintln(c.out, m)
+
+		data = append(data, m.Payload[8:]...)
+	}
+
+	// check integrity of piece
+	pieceHash := sha1.Sum(data)
+
+	if tf.PieceHashes[index] != pieceHash {
+		return fmt.Errorf("piece received has different has value to piece hash in torrent file")
+	}
+
+	// save piece to file
+	file, err := os.Create(args[1])
+	if err != nil {
+		return fmt.Errorf("failed to create file: %w", err)
+	}
+	defer file.Close()
+
+	_, err = file.Write(data)
+	if err != nil {
+		return fmt.Errorf("file to write data to file: %w", err)
+	}
+
 	return nil
 }
 
