@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"crypto/sha1"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -234,22 +233,14 @@ func downloadPieceCommand(c *Cmd, args []string) error {
 
 	// 4.2 send a request message for each block
 	// 5. Wait for piece message for each requested block
-	var data []byte
+	data := make([]byte, pieceLength)
 	for block := 0; block < blocks; block++ {
 		blockLength := blockSize
 		if block == blocks-1 {
 			blockLength = pieceLength - ((blocks - 1) * (blockSize))
 		}
 
-		payload := make([]byte, 12)
-		binary.BigEndian.PutUint32(payload[0:4], uint32(index))
-		binary.BigEndian.PutUint32(payload[4:8], uint32(block*blockSize))
-		binary.BigEndian.PutUint32(payload[8:12], uint32(blockLength))
-
-		m = &messages.Message{
-			ID:      messages.MsgRequest,
-			Payload: payload,
-		}
+		m = messages.FormatRequest(index, block*blockSize, blockLength)
 
 		_, err = conn.Write(m.Serialize())
 		if err != nil {
@@ -257,21 +248,10 @@ func downloadPieceCommand(c *Cmd, args []string) error {
 		}
 
 		m, err := messages.Read(conn)
+		_, err = messages.ParsePiece(index, data, m)
 		if err != nil {
-			return fmt.Errorf("failed to read request response message: %w", err)
+			return fmt.Errorf("error parsing piece: %w", err)
 		}
-
-		if m == nil {
-			return fmt.Errorf("expected piece but got %s", m)
-		}
-
-		if m.ID != messages.MsgPiece {
-			return fmt.Errorf("expected piece but got ID %d", m.ID)
-		}
-
-		fmt.Fprintln(c.out, m)
-
-		data = append(data, m.Payload[8:]...)
 	}
 
 	// check integrity of piece
