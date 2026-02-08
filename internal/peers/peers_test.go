@@ -53,3 +53,37 @@ func TestString(t *testing.T) {
 		assert.Equal(t, test.output, s)
 	}
 }
+
+func TestParseString(t *testing.T) {
+	tests := map[string]struct {
+		input  string
+		output Peer
+		failed bool
+	}{
+		"correct IP address": {
+			input:  "127.0.0.1:8080",
+			output: Peer{IP: net.IP{127, 0, 0, 1}, Port: 8080},
+			failed: false,
+		},
+		"incorrect host": {
+			input:  "127.500.0.1:8080",
+			output: Peer{},
+			failed: true,
+		},
+		"incorrect port": {
+			input:  "127.0.0.1:aa",
+			output: Peer{},
+			failed: true,
+		},
+	}
+
+	for _, test := range tests {
+		s, err := StringToPeer(test.input)
+		if test.failed {
+			assert.NotNil(t, err)
+		} else {
+			assert.Nil(t, err)
+		}
+		assert.Equal(t, test.output, s)
+	}
+}

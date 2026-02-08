@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"net/netip"
 	"strconv"
 )
 
@@ -25,6 +26,28 @@ func Unmarshal(peersBin []byte) ([]Peer, error) {
 		peers[i].Port = binary.BigEndian.Uint16([]byte(peersBin[offset+4 : offset+6]))
 	}
 	return peers, nil
+}
+
+func StringToPeer(address string) (Peer, error) {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return Peer{}, fmt.Errorf("invalid address format: %w", err)
+	}
+
+	ip, err := netip.ParseAddr(host)
+	if err != nil {
+		return Peer{}, fmt.Errorf("invalid IP address: %w", err)
+	}
+
+	prt, err := strconv.Atoi(port)
+	if err != nil {
+		return Peer{}, fmt.Errorf("error parsing port: %w", err)
+	}
+
+	return Peer{
+		IP:   net.IP(ip.AsSlice()),
+		Port: uint16(prt),
+	}, nil
 }
 
 func (p Peer) String() string {
