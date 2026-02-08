@@ -45,16 +45,17 @@ func New(peer peers.Peer, peerID, infoHash [20]byte) (*Client, error) {
 		return nil, err
 	}
 
-	_, err = doHandshake(conn, infoHash, peerID)
+	handshakeResp, err := doHandshake(conn, infoHash, peerID)
 	if err != nil {
 		conn.Close()
 		return nil, err
 	}
 
 	return &Client{
-		Conn:     conn,
-		Peer:     peer,
-		InfoHash: infoHash,
-		PeerID:   peerID,
+		Conn:      conn,
+		Peer:      peer,
+		InfoHash:  infoHash,
+		PeerID:    peerID,
+		Handshake: handshakeResp,
 	}, nil
 }
