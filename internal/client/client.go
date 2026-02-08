@@ -22,38 +22,42 @@ type Client struct {
 	Handshake *handshake.Handshake
 }
 
-func doHandshake(conn net.Conn, infoHash, peerID [20]byte) (*handshake.Handshake, error) {
-	req := handshake.New(infoHash, peerID)
+func (c *Client) DoHandshake() error {
+	req := handshake.New(c.InfoHash, c.PeerID)
 
-	_, err := conn.Write(req.Serialize())
+	_, err := c.Conn.Write(req.Serialize())
 	if err != nil {
-		return nil, fmt.Errorf("failed to send handshake: %w", err)
+		return fmt.Errorf("failed to send handshake: %w", err)
 	}
 
-	res, err := handshake.Read(conn)
+	res, err := handshake.Read(c.Conn)
 	if err != nil {
-		return nil, fmt.Errorf("failed to received handshake: %w", err)
+		return fmt.Errorf("failed to received handshake: %w", err)
 	}
 
-	if !bytes.Equal(res.InfoHash[:], infoHash[:]) {
-		return nil, fmt.Errorf("expected infohash %x but got %x", res.InfoHash, infoHash)
+	if !bytes.Equal(res.InfoHash[:], c.InfoHash[:]) {
+		return fmt.Errorf("expected infohash %x but got %x", res.InfoHash, c.InfoHash)
 	}
 
-	return res, nil
+	c.Handshake = res
+
+	return nil
 }
 
-func readBitfield(conn net.Conn) (Bitfield, error) {
-	msg, err := messages.Read(conn)
+func (c *Client) ReadBitfield() error {
+	msg, err := messages.Read(c.Conn)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if msg == nil {
-		return nil, err
+		return fmt.Errorf("expected bitfield but got %s", msg)
 	}
 	if msg.ID != messages.MsgBitfield {
-		return nil, fmt.Errorf("expected bitfield but got ID %d", msg.ID)
+		return fmt.Errorf("expected bitfield but got ID %d", msg.ID)
 	}
-	return msg.Payload, nil
+	c.Bitfield = msg.Payload
+
+	return nil
 }
 
 func New(peer peers.Peer, peerID, infoHash [20]byte) (*Client, error) {
@@ -62,26 +66,12 @@ func New(peer peers.Peer, peerID, infoHash [20]byte) (*Client, error) {
 		return nil, err
 	}
 
-	handshakeResp, err := doHandshake(conn, infoHash, peerID)
-	if err != nil {
-		conn.Close()
-		return nil, err
-	}
-
-	bf, err := readBitfield(conn)
-	if err != nil {
-		conn.Close()
-		return nil, err
-	}
-
 	return &Client{
-		Conn:      conn,
-		Bitfield:  bf,
-		Choked:    true,
-		Peer:      peer,
-		InfoHash:  infoHash,
-		PeerID:    peerID,
-		Handshake: handshakeResp,
+		Conn:     conn,
+		Choked:   true,
+		Peer:     peer,
+		InfoHash: infoHash,
+		PeerID:   peerID,
 	}, nil
 }
 

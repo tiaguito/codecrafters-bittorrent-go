@@ -61,13 +61,63 @@ func TestDoHandshake(t *testing.T) {
 		clientConn, serverConn := createClientAndServer(t)
 		serverConn.Write(test.serverHandshake)
 
-		h, err := doHandshake(clientConn, test.clientInfohash, test.clientPeerID)
+		client := &Client{
+			Conn:     clientConn,
+			PeerID:   test.clientPeerID,
+			InfoHash: test.clientInfohash,
+			Choked:   true,
+		}
+
+		err := client.DoHandshake()
 
 		if test.fails {
 			assert.NotNil(t, err)
 		} else {
 			assert.Nil(t, err)
-			assert.Equal(t, h, test.output)
+			assert.Equal(t, client.Handshake, test.output)
+		}
+	}
+}
+
+func TestRecvBitfield(t *testing.T) {
+	tests := map[string]struct {
+		msg    []byte
+		output Bitfield
+		fails  bool
+	}{
+		"successful bitfield": {
+			msg:    []byte{0x00, 0x00, 0x00, 0x06, 5, 1, 2, 3, 4, 5},
+			output: Bitfield{1, 2, 3, 4, 5},
+			fails:  false,
+		},
+		"message is not a bitfield": {
+			msg:    []byte{0x00, 0x00, 0x00, 0x06, 99, 1, 2, 3, 4, 5},
+			output: nil,
+			fails:  true,
+		},
+		"message is keep-alive": {
+			msg:    []byte{0x00, 0x00, 0x00, 0x00},
+			output: nil,
+			fails:  true,
+		},
+	}
+
+	for _, test := range tests {
+		clientConn, serverConn := createClientAndServer(t)
+		serverConn.Write(test.msg)
+
+		client := &Client{
+			Conn:   clientConn,
+			Choked: true,
+		}
+
+		err := client.ReadBitfield()
+
+		if test.fails {
+			assert.NotNil(t, err)
+		} else {
+			assert.Nil(t, err)
+			assert.Equal(t, client.Bitfield, test.output)
 		}
 	}
 }
