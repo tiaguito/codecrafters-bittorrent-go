@@ -11,8 +11,10 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/codecrafters-io/bittorrent-starter-go/internal/client"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/handshake"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/messages"
+	"github.com/codecrafters-io/bittorrent-starter-go/internal/peers"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/torrentfile"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/utils"
 	bencode "github.com/jackpal/bencode-go"
@@ -111,30 +113,22 @@ func handshakeCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("failed to create torrent: %w", err)
 	}
 
-	conn, err := net.Dial("tcp", args[1])
-	if err != nil {
-		return fmt.Errorf("failed to connect to peer: %w", err)
-	}
-	defer conn.Close()
-
 	peerID, err := utils.GeneratePeerID()
 	if err != nil {
 		return fmt.Errorf("failed to generate peer ID: %w", err)
 	}
 
-	h := handshake.New(tf.InfoHash, peerID)
-
-	_, err = conn.Write(h.Serialize())
+	peer, err := peers.StringToPeer(args[1])
 	if err != nil {
-		return fmt.Errorf("failed to send handshake request: %w", err)
+		return fmt.Errorf("invalid IP address: %w", err)
 	}
 
-	res, err := handshake.Read(conn)
+	clnt, err := client.New(peer, peerID, tf.InfoHash)
 	if err != nil {
-		return fmt.Errorf("failed to read handshake response: %w", err)
+		return fmt.Errorf("failed to create client: %w", err)
 	}
 
-	fmt.Fprintf(c.out, "Peer ID: %x\n", res.PeerID)
+	fmt.Fprintf(c.out, "Peer ID: %x\n", clnt.Handshake.PeerID)
 	return nil
 }
 
