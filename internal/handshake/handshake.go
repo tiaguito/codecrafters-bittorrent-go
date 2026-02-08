@@ -9,8 +9,8 @@ import (
 
 type Handshake struct {
 	Pstr     string
-	InfoHash [torrentfile.HASHLEN]byte
-	PeerID   [torrentfile.HASHLEN]byte
+	InfoHash [20]byte
+	PeerID   [20]byte
 }
 
 func New(infoHash, peerID [torrentfile.HASHLEN]byte) *Handshake {

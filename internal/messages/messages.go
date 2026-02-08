@@ -41,7 +41,7 @@ func Read(r io.Reader) (*Message, error) {
 	lengthBuf := make([]byte, 4)
 	_, err := io.ReadFull(r, lengthBuf)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read message length: %w", err)
 	}
 	length := binary.BigEndian.Uint32(lengthBuf)
 
@@ -53,7 +53,7 @@ func Read(r io.Reader) (*Message, error) {
 	messageBuf := make([]byte, length)
 	_, err = io.ReadFull(r, messageBuf)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read message body: %w", err)
 	}
 
 	m := &Message{
