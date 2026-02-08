@@ -117,12 +117,12 @@ func (d *Downloader) attemptToDownloadPiece(index int) ([]byte, error) {
 	pieceLength := d.File.PieceLength
 	const blockSize int = 16 * 1024
 
-	pieceCount := int(math.Ceil(float64(d.File.Length) / float64(blockSize)))
+	pieceCount := int(math.Ceil(float64(d.File.Length) / float64(d.File.PieceLength)))
 	if index == pieceCount-1 {
 		pieceLength = d.File.Length % d.File.PieceLength
 	}
 
-	blocks := int(math.Ceil(float64(pieceLength) / float64(BlockSize)))
+	blocks := int(math.Ceil(float64(pieceLength) / float64(blockSize)))
 
 	// 4.2 send a request message for each block
 	// 5. Wait for piece message for each requested block
