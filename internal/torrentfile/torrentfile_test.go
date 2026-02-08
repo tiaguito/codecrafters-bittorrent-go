@@ -24,7 +24,7 @@ func TestOpen(t *testing.T) {
 	assert.Equal(t, expected, torrenFile)
 }
 
-func TestString(t *testing.T) {
+func TestInfo(t *testing.T) {
 	tests := []struct {
 		input  TorrentFile
 		output string
@@ -53,7 +53,7 @@ f00d937a0213df1982bc8d097227ad9e909acc17`,
 		},
 	}
 	for _, test := range tests {
-		s := test.input.String()
+		s := test.input.Info()
 		assert.Equal(t, test.output, s)
 	}
 }

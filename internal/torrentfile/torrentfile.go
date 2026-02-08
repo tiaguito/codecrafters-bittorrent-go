@@ -94,7 +94,7 @@ func (bto *bencodeTorrent) toTorrentFile() (TorrentFile, error) {
 	return t, nil
 }
 
-func (t TorrentFile) String() string {
+func (t TorrentFile) Info() string {
 	var str []string
 	str = append(str, fmt.Sprintf("Tracker URL: %s", t.Announce))
 	str = append(str, fmt.Sprintf("Length: %d", t.Length))
