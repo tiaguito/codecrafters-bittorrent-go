@@ -111,9 +111,9 @@ func handshakeCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("failed to create client: %w", err)
 	}
 
-	downloader.Client.DoHandshake()
+	downloader.Clients[peer.String()].DoHandshake()
 
-	fmt.Fprintf(c.out, "Peer ID: %x\n", downloader.Client.Handshake.PeerID)
+	fmt.Fprintf(c.out, "Peer ID: %x\n", downloader.Clients[peer.String()].Handshake.PeerID)
 	return nil
 }
 
@@ -129,15 +129,15 @@ func downloadPieceCommand(c *Cmd, args []string) error {
 
 	downloader.CreateClient(downloader.Peers[0])
 
-	downloader.Client.DoHandshake()
-	downloader.Client.ReadBitfield()
+	downloader.Clients[downloader.Peers[0].String()].DoHandshake()
+	downloader.Clients[downloader.Peers[0].String()].ReadBitfield()
 
 	index, err := strconv.Atoi(args[3])
 	if err != nil {
 		return fmt.Errorf("failed to convert index: %w", err)
 	}
 
-	if err = downloader.DownloadPiece(args[1], index); err != nil {
+	if err = downloader.DownloadPiece(args[1], index, downloader.Peers[0]); err != nil {
 		return err
 	}
 

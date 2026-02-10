@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"fmt"
-	"math"
 	"os"
 
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/client"
@@ -15,10 +14,10 @@ import (
 )
 
 type Downloader struct {
-	PeerID [20]byte
-	Peers  []peers.Peer
-	File   torrentfile.TorrentFile
-	Client *client.Client
+	PeerID  [20]byte
+	Peers   []peers.Peer
+	File    torrentfile.TorrentFile
+	Clients map[string]*client.Client
 }
 
 func NewDownloader(path string) (*Downloader, error) {
@@ -38,9 +37,10 @@ func NewDownloader(path string) (*Downloader, error) {
 	}
 
 	downloader := &Downloader{
-		PeerID: peerID,
-		Peers:  peers,
-		File:   tf,
+		PeerID:  peerID,
+		Peers:   peers,
+		File:    tf,
+		Clients: make(map[string]*client.Client),
 	}
 
 	return downloader, nil
@@ -51,26 +51,30 @@ func (d *Downloader) CreateClient(peer peers.Peer) error {
 	if err != nil {
 		return err
 	}
-	d.Client = c
+	d.Clients[peer.String()] = c
 	return nil
 }
 
-func (d *Downloader) DownloadPiece(destinationPath string, index int) error {
+func (d *Downloader) DownloadPiece(destinationPath string, index int, peer peers.Peer) error {
 	/* peer messages */
 	// 1. receive bitfield
 	// included in the client instantiation
+	client, ok := d.Clients[peer.String()]
+	if !ok {
+		return fmt.Errorf("no client connected to peer %s", peer)
+	}
 
 	// 2. send interested
-	if err := d.Client.SendInterested(); err != nil {
+	if err := client.SendInterested(); err != nil {
 		return fmt.Errorf("failed to send interested: %w", err)
 	}
 
 	// 3. send unchoke
-	if err := d.Client.SendUnchoke(); err != nil {
+	if err := client.SendUnchoke(); err != nil {
 		return fmt.Errorf("failed to receive unchoke: %w", err)
 	}
 
-	m, err := d.Client.Read()
+	m, err := client.Read()
 	if err != nil {
 		return fmt.Errorf("failed to receive unchoke: %w", err)
 	}
@@ -83,9 +87,9 @@ func (d *Downloader) DownloadPiece(destinationPath string, index int) error {
 		return fmt.Errorf("expected unchoke but got ID %d", m.ID)
 	}
 
-	d.Client.Choked = false
+	client.Choked = false
 
-	data, err := d.attemptToDownloadPiece(index)
+	data, err := d.attemptToDownloadPiece(client, index)
 	if err != nil {
 		return fmt.Errorf("failed to download piece: %w", err)
 	}
@@ -111,38 +115,25 @@ func (d *Downloader) DownloadPiece(destinationPath string, index int) error {
 	return nil
 }
 
-func (d *Downloader) attemptToDownloadPiece(index int) ([]byte, error) {
+func (d *Downloader) attemptToDownloadPiece(client *client.Client, index int) ([]byte, error) {
 	// 4
 	// 4.1 break the piece into blocks of 16 kiB
-	pieceLength := d.File.PieceLength
-	const blockSize int = 16 * 1024
-
-	pieceCount := int(math.Ceil(float64(d.File.Length) / float64(d.File.PieceLength)))
-	if index == pieceCount-1 {
-		pieceLength = d.File.Length % d.File.PieceLength
-	}
-
-	blocks := int(math.Ceil(float64(pieceLength) / float64(blockSize)))
+	piece := NewPiece(index, d.File.Length, d.File.PieceLength, d.File.InfoHash)
 
 	// 4.2 send a request message for each block
 	// 5. Wait for piece message for each requested block
-	data := make([]byte, pieceLength)
-	for block := 0; block < blocks; block++ {
-		blockLength := blockSize
-		if block == blocks-1 {
-			blockLength = pieceLength - ((blocks - 1) * blockSize)
-		}
-
-		if err := d.Client.SendRequest(index, block*blockSize, blockLength); err != nil {
+	data := make([]byte, piece.Length)
+	for _, block := range piece.Blocks {
+		if err := client.SendRequest(piece.Index, block.Begin, block.Length); err != nil {
 			return nil, fmt.Errorf("failed to send request: %w", err)
 		}
 
-		m, err := d.Client.Read()
+		m, err := client.Read()
 		if err != nil {
 			return nil, fmt.Errorf("failed to receive request: %w", err)
 		}
 
-		_, err = messages.ParsePiece(index, data, m)
+		_, err = messages.ParsePiece(piece.Index, data, m)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing piece: %w", err)
 		}
