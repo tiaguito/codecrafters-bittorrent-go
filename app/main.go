@@ -48,7 +48,7 @@ var commandHandlers = map[string]func(*Cmd, []string) error{
 }
 
 func decodeCommand(c *Cmd, args []string) error {
-	if len(args) < 1 {
+	if len(args) != 1 {
 		return fmt.Errorf("usage: decode <bencoded string>")
 	}
 
@@ -62,7 +62,7 @@ func decodeCommand(c *Cmd, args []string) error {
 }
 
 func infoCommand(c *Cmd, args []string) error {
-	if len(args) < 1 {
+	if len(args) != 1 {
 		return fmt.Errorf("usage: info <torrent file>")
 	}
 
@@ -77,7 +77,7 @@ func infoCommand(c *Cmd, args []string) error {
 }
 
 func peersCommand(c *Cmd, args []string) error {
-	if len(args) < 1 {
+	if len(args) != 1 {
 		return fmt.Errorf("usage: peers <torrent file>")
 	}
 
@@ -94,7 +94,7 @@ func peersCommand(c *Cmd, args []string) error {
 }
 
 func handshakeCommand(c *Cmd, args []string) error {
-	if len(args) < 2 {
+	if len(args) != 2 {
 		return fmt.Errorf("usage: handshake <torrent file> <peer_ip>:<peer_port>")
 	}
 	downloader, err := p2p.NewDownloader(args[0])
@@ -118,7 +118,7 @@ func handshakeCommand(c *Cmd, args []string) error {
 }
 
 func downloadPieceCommand(c *Cmd, args []string) error {
-	if len(args) < 4 {
+	if len(args) != 4 {
 		return fmt.Errorf("usage: download_piece -o <piece destination path> <torrent file> <piece index>")
 	}
 
