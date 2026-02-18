@@ -137,8 +137,20 @@ func downloadPieceCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("failed to convert index: %w", err)
 	}
 
-	if err = downloader.DownloadPiece(args[1], index, downloader.Peers[0]); err != nil {
+	if err = downloader.DownloadPiece(index, downloader.Peers[0]); err != nil {
 		return err
+	}
+
+	// save piece to file
+	file, err := os.Create(args[1])
+	if err != nil {
+		return fmt.Errorf("failed to create file: %w", err)
+	}
+	defer file.Close()
+
+	_, err = file.Write(downloader.PieceManager.Pieces[index].AssembleData())
+	if err != nil {
+		return fmt.Errorf("failed to write data to file: %w", err)
 	}
 
 	return nil

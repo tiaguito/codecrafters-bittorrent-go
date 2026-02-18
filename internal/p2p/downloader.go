@@ -1,8 +1,6 @@
 package p2p
 
 import (
-	"bytes"
-	"crypto/sha1"
 	"fmt"
 	"os"
 
@@ -14,10 +12,11 @@ import (
 )
 
 type Downloader struct {
-	PeerID  [20]byte
-	Peers   []peers.Peer
-	File    torrentfile.TorrentFile
-	Clients map[string]*client.Client
+	PeerID       [20]byte
+	Peers        []peers.Peer
+	File         torrentfile.TorrentFile
+	PieceManager *PieceManager
+	Clients      map[string]*client.Client
 }
 
 func NewDownloader(path string) (*Downloader, error) {
@@ -37,10 +36,11 @@ func NewDownloader(path string) (*Downloader, error) {
 	}
 
 	downloader := &Downloader{
-		PeerID:  peerID,
-		Peers:   peers,
-		File:    tf,
-		Clients: make(map[string]*client.Client),
+		PeerID:       peerID,
+		Peers:        peers,
+		PieceManager: NewPieceManager(tf),
+		File:         tf,
+		Clients:      make(map[string]*client.Client),
 	}
 
 	return downloader, nil
@@ -55,7 +55,7 @@ func (d *Downloader) CreateClient(peer peers.Peer) error {
 	return nil
 }
 
-func (d *Downloader) DownloadPiece(destinationPath string, index int, peer peers.Peer) error {
+func (d *Downloader) DownloadPiece(index int, peer peers.Peer) error {
 	/* peer messages */
 	// 1. receive bitfield
 	// included in the client instantiation
@@ -89,42 +89,78 @@ func (d *Downloader) DownloadPiece(destinationPath string, index int, peer peers
 
 	client.Choked = false
 
-	data, err := d.attemptToDownloadPiece(client, index)
+	blocks, err := d.attemptToDownloadPiece(peer.String(), index)
 	if err != nil {
 		return fmt.Errorf("failed to download piece: %w", err)
 	}
 
-	// check integrity of piece
-	pieceHash := sha1.Sum(data)
+	d.PieceManager.Pieces[index].Blocks = blocks
 
-	if !bytes.Equal(d.File.PieceHashes[index][:], pieceHash[:]) {
+	if !d.PieceManager.Pieces[index].Verify() {
 		return fmt.Errorf("piece received has different value to piece hash in torrent file")
 	}
 
-	// save piece to file
-	file, err := os.Create(destinationPath)
-	if err != nil {
-		return fmt.Errorf("failed to create file: %w", err)
-	}
-	defer file.Close()
-
-	_, err = file.Write(data)
-	if err != nil {
-		return fmt.Errorf("failed to write data to file: %w", err)
-	}
 	return nil
 }
 
-func (d *Downloader) attemptToDownloadPiece(client *client.Client, index int) ([]byte, error) {
-	// 4
-	// 4.1 break the piece into blocks of 16 kiB
-	piece := NewPiece(index, d.File.Length, d.File.PieceLength, d.File.InfoHash)
+func (d *Downloader) DownloadFile() {
+	results := make(chan int)
 
+	// I'm assuming all pieces will be downloaded with no problem
+	// whatsoever
+	for _, peer := range d.Peers {
+		go d.startDownloadWorker(peer, results)
+	}
+
+	donePieces := 0
+
+	for donePieces < d.File.NumPieces() {
+		<-results
+		donePieces++
+	}
+
+	fmt.Println("Download Complete!")
+}
+
+func (d *Downloader) startDownloadWorker(peer peers.Peer, results chan int) {
+	d.CreateClient(peer)
+	d.Clients[peer.String()].DoHandshake()
+	d.Clients[peer.String()].ReadBitfield()
+
+	for idx := range d.PieceManager.Pieces {
+		d.PieceManager.Pieces[idx].mu.Lock()
+		defer d.PieceManager.Pieces[idx].mu.Unlock()
+
+		d.PieceManager.Missing[idx] = false
+		d.PieceManager.Pieces[idx].State = PieceStatePending
+		d.PieceManager.InProgress[idx] = true
+
+		buf, err := d.attemptToDownloadPiece(peer.String(), idx)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to download piece %d", idx)
+			d.PieceManager.InProgress[idx] = false
+			d.PieceManager.Missing[idx] = true
+		}
+
+		d.PieceManager.Pieces[idx].Blocks = buf
+		d.PieceManager.Pieces[idx].State = PieceStateComplete
+		d.PieceManager.InProgress[idx] = false
+		d.PieceManager.Downloaded[idx] = true
+
+		results <- idx
+	}
+}
+
+func (d *Downloader) attemptToDownloadPiece(peerAddress string, pieceIndex int) ([]*Block, error) {
+	client := d.Clients[peerAddress]
+	piece := d.PieceManager.Pieces[pieceIndex]
 	// 4.2 send a request message for each block
 	// 5. Wait for piece message for each requested block
+	blocks := make([]*Block, piece.NumBlocks())
 	data := make([]byte, piece.Length)
-	for _, block := range piece.Blocks {
-		if err := client.SendRequest(piece.Index, block.Begin, block.Length); err != nil {
+
+	for i, block := range piece.Blocks {
+		if err := client.SendRequest(pieceIndex, block.Begin, block.Length); err != nil {
 			return nil, fmt.Errorf("failed to send request: %w", err)
 		}
 
@@ -133,10 +169,17 @@ func (d *Downloader) attemptToDownloadPiece(client *client.Client, index int) ([
 			return nil, fmt.Errorf("failed to receive request: %w", err)
 		}
 
-		_, err = messages.ParsePiece(piece.Index, data, m)
+		_, err = messages.ParsePiece(pieceIndex, data, m)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing piece: %w", err)
 		}
+		blocks[i] = &Block{
+			Index:  piece.Index,
+			Begin:  block.Begin,
+			Length: block.Length,
+			Data:   data[block.Begin:],
+		}
 	}
-	return data, nil
+
+	return blocks, nil
 }

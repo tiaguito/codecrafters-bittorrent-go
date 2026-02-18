@@ -1,6 +1,10 @@
 package p2p
 
-import "github.com/codecrafters-io/bittorrent-starter-go/internal/torrentfile"
+import (
+	"sync"
+
+	"github.com/codecrafters-io/bittorrent-starter-go/internal/torrentfile"
+)
 
 type PieceManager struct {
 	Torrent    torrentfile.TorrentFile
@@ -9,6 +13,7 @@ type PieceManager struct {
 	InProgress map[int]bool
 	Missing    map[int]bool
 	Completed  int
+	mu         sync.RWMutex
 }
 
 func NewPieceManager(torrentFile torrentfile.TorrentFile) *PieceManager {

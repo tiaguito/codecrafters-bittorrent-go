@@ -1,6 +1,11 @@
 package p2p
 
-import "math"
+import (
+	"bytes"
+	"crypto/sha1"
+	"math"
+	"sync"
+)
 
 const (
 	BlockSize = 16 * 1024
@@ -22,12 +27,13 @@ type Block struct {
 }
 
 type Piece struct {
-	Index    int
-	Hash     [20]byte
-	Length   int
-	Blocks   []*Block
-	State    PieceState
-	Download int
+	Index      int
+	Hash       [20]byte
+	Length     int
+	Blocks     []*Block
+	State      PieceState
+	Downloaded int
+	mu         sync.RWMutex
 }
 
 // 4
@@ -63,4 +69,37 @@ func NewPiece(index, fileLength, pieceLength int, hash [20]byte) *Piece {
 		Blocks: blocks,
 		State:  PieceStateNone,
 	}
+}
+
+func (p *Piece) AssembleData() []byte {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	data := make([]byte, p.Length)
+
+	for _, block := range p.Blocks {
+		if block.Data != nil {
+			copy(data[block.Begin:], block.Data)
+		}
+	}
+
+	return data
+}
+
+func (p *Piece) NumBlocks() int {
+	return len(p.Blocks)
+}
+
+func (p *Piece) Verify() bool {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	data := p.AssembleData()
+
+	if data == nil {
+		return false
+	}
+
+	hash := sha1.Sum(data)
+	return bytes.Equal(p.Hash[:], hash[:])
 }
