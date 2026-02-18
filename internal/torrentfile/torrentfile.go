@@ -107,3 +107,7 @@ func (t TorrentFile) Info() string {
 
 	return strings.Join(str, "\n")
 }
+
+func (t TorrentFile) NumPieces() int {
+	return len(t.PieceHashes)
+}

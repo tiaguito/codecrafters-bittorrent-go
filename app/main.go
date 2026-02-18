@@ -145,6 +145,20 @@ func downloadPieceCommand(c *Cmd, args []string) error {
 }
 
 func downloadCommand(c *Cmd, args []string) error {
+	if len(args) != 3 {
+		return fmt.Errorf("usage: download -o <destination path> <torrent file>")
+	}
+
+	downloader, err := p2p.NewDownloader(args[2])
+	if err != nil {
+		return fmt.Errorf("failed to create dowloader: %w", err)
+	}
+
+	downloader.CreateClient(downloader.Peers[0])
+
+	downloader.Clients[downloader.Peers[0].String()].DoHandshake()
+	downloader.Clients[downloader.Peers[0].String()].ReadBitfield()
+
 	return nil
 }
 
