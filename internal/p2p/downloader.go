@@ -46,12 +46,15 @@ func NewDownloader(path string) (*Downloader, error) {
 	return downloader, nil
 }
 
-func (d *Downloader) CreateClient(peer peers.Peer) error {
-	c, err := client.New(peer, d.PeerID, d.File.InfoHash)
-	if err != nil {
-		return err
+func (d *Downloader) AddClient(peer peers.Peer) error {
+	if _, ok := d.Clients[peer.String()]; !ok {
+		c, err := client.New(peer, d.PeerID, d.File.InfoHash)
+		if err != nil {
+			return err
+		}
+		d.Clients[peer.String()] = c
 	}
-	d.Clients[peer.String()] = c
+
 	return nil
 }
 
@@ -123,7 +126,7 @@ func (d *Downloader) DownloadFile() {
 }
 
 func (d *Downloader) startDownloadWorker(peer peers.Peer, results chan int) {
-	d.CreateClient(peer)
+	d.AddClient(peer)
 	d.Clients[peer.String()].DoHandshake()
 	d.Clients[peer.String()].ReadBitfield()
 

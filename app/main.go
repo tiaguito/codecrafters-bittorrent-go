@@ -107,7 +107,7 @@ func handshakeCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("invalid IP address: %w", err)
 	}
 
-	if err = downloader.CreateClient(peer); err != nil {
+	if err = downloader.AddClient(peer); err != nil {
 		return fmt.Errorf("failed to create client: %w", err)
 	}
 
@@ -127,7 +127,7 @@ func downloadPieceCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("failed to create dowloader: %w", err)
 	}
 
-	downloader.CreateClient(downloader.Peers[0])
+	downloader.AddClient(downloader.Peers[0])
 
 	downloader.Clients[downloader.Peers[0].String()].DoHandshake()
 	downloader.Clients[downloader.Peers[0].String()].ReadBitfield()
@@ -166,10 +166,9 @@ func downloadCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("failed to create dowloader: %w", err)
 	}
 
-	downloader.CreateClient(downloader.Peers[0])
+	downloader.DownloadFile()
 
-	downloader.Clients[downloader.Peers[0].String()].DoHandshake()
-	downloader.Clients[downloader.Peers[0].String()].ReadBitfield()
+	// save the piece to a file
 
 	return nil
 }
