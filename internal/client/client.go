@@ -16,7 +16,6 @@ type Client struct {
 	Conn      net.Conn
 	Bitfield  Bitfield
 	Choked    bool
-	Peer      peers.Peer
 	InfoHash  [20]byte
 	PeerID    [20]byte
 	Handshake *handshake.Handshake
@@ -69,7 +68,6 @@ func New(peer peers.Peer, peerID, infoHash [20]byte) (*Client, error) {
 	return &Client{
 		Conn:     conn,
 		Choked:   true,
-		Peer:     peer,
 		InfoHash: infoHash,
 		PeerID:   peerID,
 	}, nil
