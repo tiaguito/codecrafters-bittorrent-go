@@ -71,9 +71,24 @@ func NewPiece(index, fileLength, pieceLength int, hash [20]byte) *Piece {
 	}
 }
 
+func (p *Piece) NumBlocks() int {
+	return len(p.Blocks)
+}
+
+func (p *Piece) IsComplete() bool {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	return p.Length == p.Downloaded
+}
+
 func (p *Piece) AssembleData() []byte {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
+
+	if !p.IsComplete() {
+		return nil
+	}
 
 	data := make([]byte, p.Length)
 
@@ -86,13 +101,13 @@ func (p *Piece) AssembleData() []byte {
 	return data
 }
 
-func (p *Piece) NumBlocks() int {
-	return len(p.Blocks)
-}
-
 func (p *Piece) Verify() bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
+
+	if !p.IsComplete() {
+		return false
+	}
 
 	data := p.AssembleData()
 

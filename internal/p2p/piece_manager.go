@@ -19,8 +19,7 @@ type PieceManager struct {
 func NewPieceManager(torrentFile torrentfile.TorrentFile) *PieceManager {
 	pieces := make([]*Piece, torrentFile.NumPieces())
 	for i := 0; i < torrentFile.NumPieces(); i++ {
-		pieceSize := torrentFile.PieceLength
-		pieces[i] = NewPiece(i, torrentFile.Length, pieceSize, torrentFile.PieceHashes[i])
+		pieces[i] = NewPiece(i, torrentFile.Length, torrentFile.PieceLength, torrentFile.PieceHashes[i])
 	}
 
 	missing := make(map[int]bool)

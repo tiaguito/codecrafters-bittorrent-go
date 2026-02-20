@@ -107,7 +107,7 @@ func handshakeCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("invalid IP address: %w", err)
 	}
 
-	if err = downloader.AddClient(peer); err != nil {
+	if err = downloader.CreateClient(peer); err != nil {
 		return fmt.Errorf("failed to create client: %w", err)
 	}
 
@@ -127,7 +127,7 @@ func downloadPieceCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("failed to create dowloader: %w", err)
 	}
 
-	downloader.AddClient(downloader.Peers[0])
+	downloader.CreateClient(downloader.Peers[0])
 
 	downloader.Clients[downloader.Peers[0].String()].DoHandshake()
 	downloader.Clients[downloader.Peers[0].String()].ReadBitfield()
@@ -166,9 +166,27 @@ func downloadCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("failed to create dowloader: %w", err)
 	}
 
+	for _, peer := range downloader.Peers {
+		downloader.CreateClient(peer)
+	}
+
 	downloader.DownloadFile()
 
 	// save the piece to a file
+	file, err := os.Create(args[1])
+	if err != nil {
+		return fmt.Errorf("failed to create file: %w", err)
+	}
+	defer file.Close()
+
+	var fullData []byte
+	for i := range downloader.PieceManager.Pieces {
+		fullData = append(fullData, downloader.PieceManager.Pieces[i].AssembleData()...)
+	}
+	_, err = file.Write(fullData)
+	if err != nil {
+		return fmt.Errorf("failed to write data to file: %w", err)
+	}
 
 	return nil
 }
