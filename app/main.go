@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/codecrafters-io/bittorrent-starter-go/internal/magnet"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/p2p"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/peers"
 	bencode "github.com/jackpal/bencode-go"
@@ -45,6 +46,7 @@ var commandHandlers = map[string]func(*Cmd, []string) error{
 	"handshake":      handshakeCommand,
 	"download_piece": downloadPieceCommand,
 	"download":       downloadCommand,
+	"magnet_parse":   magnetParseCommand,
 }
 
 func decodeCommand(c *Cmd, args []string) error {
@@ -187,6 +189,21 @@ func downloadCommand(c *Cmd, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to write data to file: %w", err)
 	}
+
+	return nil
+}
+
+func magnetParseCommand(c *Cmd, args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: magnet_parse <magnet-link>")
+	}
+
+	magnet, err := magnet.New(args[0])
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprint(c.out, magnet)
 
 	return nil
 }

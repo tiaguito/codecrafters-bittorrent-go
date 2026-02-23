@@ -142,17 +142,17 @@ func (d *Downloader) startDownloadWorker(peer peers.Peer, workQueue chan int, re
 
 	// 2. send interested
 	if err := client.SendInterested(); err != nil {
-		fmt.Printf("failed to send interested: %w", err)
+		fmt.Printf("failed to send interested: %s", err)
 	}
 
 	// 3. send unchoke
 	if err := client.SendUnchoke(); err != nil {
-		fmt.Printf("failed to receive unchoke: %w", err)
+		fmt.Printf("failed to receive unchoke: %s", err)
 	}
 
 	m, err := client.Read()
 	if err != nil {
-		fmt.Printf("failed to receive unchoke: %w", err)
+		fmt.Printf("failed to receive unchoke: %s", err)
 	}
 
 	if m == nil {
