@@ -32,7 +32,7 @@ func NewDownloader(path string) (*Downloader, error) {
 		return nil, err
 	}
 
-	peers, err := tf.DiscoverPeers(peerID, torrentfile.PORT)
+	peers, err := tf.DiscoverPeers(peerID)
 	if err != nil {
 		return nil, err
 	}
