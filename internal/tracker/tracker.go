@@ -1,4 +1,4 @@
-package torrentfile
+package tracker
 
 import (
 	"net/http"
@@ -17,28 +17,28 @@ type bencodeTrackerResponse struct {
 	Peers    string `bencode:"string"`
 }
 
-func (t *TorrentFile) buildTrackerURL(peerID [20]byte) (string, error) {
-	base, err := url.Parse(t.Announce)
+func buildTrackerURL(trackerURL string, peerID, infoHash [20]byte, length int) (string, error) {
+	base, err := url.Parse(trackerURL)
 	if err != nil {
 		return "", err
 	}
 
 	params := url.Values{
-		"info_hash":  []string{string(t.InfoHash[:])},
+		"info_hash":  []string{string(infoHash[:])},
 		"peer_id":    []string{string(peerID[:])},
 		"port":       []string{strconv.Itoa(int(PORT))},
 		"uploaded":   []string{"0"},
 		"downloaded": []string{"0"},
 		"compact":    []string{"1"},
-		"left":       []string{strconv.Itoa(t.Length)},
+		"left":       []string{strconv.Itoa(length)},
 	}
 
 	base.RawQuery = params.Encode()
 	return base.String(), nil
 }
 
-func (t *TorrentFile) DiscoverPeers(peerID [20]byte) ([]peers.Peer, error) {
-	url, err := t.buildTrackerURL(peerID)
+func DiscoverPeers(trackerURL string, peerID, infoHash [20]byte, length int) ([]peers.Peer, error) {
+	url, err := buildTrackerURL(trackerURL, peerID, infoHash, length)
 	if err != nil {
 		return nil, err
 	}

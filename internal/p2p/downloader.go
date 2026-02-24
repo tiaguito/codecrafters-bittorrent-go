@@ -9,6 +9,7 @@ import (
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/messages"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/peers"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/torrentfile"
+	"github.com/codecrafters-io/bittorrent-starter-go/internal/tracker"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/utils"
 )
 
@@ -32,7 +33,7 @@ func NewDownloader(path string) (*Downloader, error) {
 		return nil, err
 	}
 
-	peers, err := tf.DiscoverPeers(peerID)
+	peers, err := tracker.DiscoverPeers(tf.Announce, peerID, tf.InfoHash, tf.Length)
 	if err != nil {
 		return nil, err
 	}
