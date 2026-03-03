@@ -21,10 +21,18 @@ type Client struct {
 	Handshake *handshake.Handshake
 }
 
-func (c *Client) DoHandshake() error {
-	req := handshake.New(c.InfoHash, c.PeerID)
+func (c *Client) DoHandshake(enableMagnetExtension bool) error {
+	h := handshake.New(c.InfoHash, c.PeerID)
 
-	_, err := c.Conn.Write(req.Serialize())
+	req := h.Serialize()
+
+	// 00000000 00000000 00000000 00000000 00000000 00010000 00000000 00000000
+	// setting the 20th bit from the right to 1
+	if enableMagnetExtension {
+		req[25] |= 1 << 4
+	}
+
+	_, err := c.Conn.Write(req)
 	if err != nil {
 		return fmt.Errorf("failed to send handshake: %w", err)
 	}
