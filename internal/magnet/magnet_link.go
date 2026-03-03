@@ -21,7 +21,7 @@ var (
 )
 
 type Magnet struct {
-	InfoHash    []byte
+	InfoHash    [20]byte
 	DisplayName string
 	Trackers    []string
 }
@@ -53,9 +53,11 @@ func New(link string) (*Magnet, error) {
 	}, nil
 }
 
-func parseXT(values []string) ([]byte, error) {
+func parseXT(values []string) ([20]byte, error) {
+	var zero [20]byte
+
 	if len(values) == 0 {
-		return nil, ErrMissingXT
+		return zero, ErrMissingXT
 	}
 
 	var found []byte
@@ -65,10 +67,10 @@ func parseXT(values []string) ([]byte, error) {
 			hashPart := strings.TrimPrefix(v, "urn:btih:")
 			decoded, err := decodeInfoHash(hashPart)
 			if err != nil {
-				return nil, err
+				return zero, err
 			}
 			if len(found) != 0 && !bytes.Equal(found[:], decoded[:]) {
-				return nil, ErrInvalidDuplicateXT
+				return zero, ErrInvalidDuplicateXT
 			} else if len(found) == 0 {
 				found = decoded
 			}
@@ -76,10 +78,12 @@ func parseXT(values []string) ([]byte, error) {
 	}
 
 	if found == nil {
-		return nil, ErrInvalidXT
+		return zero, ErrInvalidXT
 	}
 
-	return found, nil
+	var out [20]byte
+	copy(out[:], found)
+	return out, nil
 }
 
 func decodeInfoHash(s string) ([]byte, error) {
