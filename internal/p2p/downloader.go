@@ -10,7 +10,6 @@ import (
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/peers"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/torrentfile"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/tracker"
-	"github.com/codecrafters-io/bittorrent-starter-go/internal/utils"
 )
 
 type Downloader struct {
@@ -28,7 +27,7 @@ func NewDownloader(path string) (*Downloader, error) {
 		return nil, err
 	}
 
-	peerID, err := utils.GeneratePeerID()
+	peerID, err := tracker.GeneratePeerID()
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +135,7 @@ func (d *Downloader) DownloadFile() {
 
 func (d *Downloader) startDownloadWorker(peer peers.Peer, workQueue chan int, results chan int) {
 	client := d.Clients[peer.String()]
-	client.DoHandshake()
+	client.DoHandshake(false)
 	client.ReadBitfield()
 
 	fmt.Printf("Started connection with peer %s\n", peer)

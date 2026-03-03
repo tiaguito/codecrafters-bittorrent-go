@@ -8,9 +8,11 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/codecrafters-io/bittorrent-starter-go/internal/client"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/magnet"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/p2p"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/peers"
+	"github.com/codecrafters-io/bittorrent-starter-go/internal/tracker"
 	bencode "github.com/jackpal/bencode-go"
 )
 
@@ -40,13 +42,14 @@ func (c *Cmd) Execute(args []string) error {
 }
 
 var commandHandlers = map[string]func(*Cmd, []string) error{
-	"decode":         decodeCommand,
-	"info":           infoCommand,
-	"peers":          peersCommand,
-	"handshake":      handshakeCommand,
-	"download_piece": downloadPieceCommand,
-	"download":       downloadCommand,
-	"magnet_parse":   magnetParseCommand,
+	"decode":           decodeCommand,
+	"info":             infoCommand,
+	"peers":            peersCommand,
+	"handshake":        handshakeCommand,
+	"download_piece":   downloadPieceCommand,
+	"download":         downloadCommand,
+	"magnet_parse":     magnetParseCommand,
+	"magnet_handshake": magnetHandshakeCommand,
 }
 
 func decodeCommand(c *Cmd, args []string) error {
@@ -113,7 +116,7 @@ func handshakeCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("failed to create client: %w", err)
 	}
 
-	downloader.Clients[peer.String()].DoHandshake()
+	downloader.Clients[peer.String()].DoHandshake(false)
 
 	fmt.Fprintf(c.out, "Peer ID: %x\n", downloader.Clients[peer.String()].Handshake.PeerID)
 	return nil
@@ -131,7 +134,7 @@ func downloadPieceCommand(c *Cmd, args []string) error {
 
 	downloader.CreateClient(downloader.Peers[0])
 
-	downloader.Clients[downloader.Peers[0].String()].DoHandshake()
+	downloader.Clients[downloader.Peers[0].String()].DoHandshake(false)
 	downloader.Clients[downloader.Peers[0].String()].ReadBitfield()
 
 	index, err := strconv.Atoi(args[3])
@@ -204,6 +207,40 @@ func magnetParseCommand(c *Cmd, args []string) error {
 	}
 
 	fmt.Fprint(c.out, magnet)
+
+	return nil
+}
+
+func magnetHandshakeCommand(c *Cmd, args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: magnet_handshake <magnet-link>")
+	}
+
+	magnet, err := magnet.New(args[0])
+	if err != nil {
+		return err
+	}
+
+	peerID, err := tracker.GeneratePeerID()
+	if err != nil {
+		return err
+	}
+
+	peers, err := tracker.DiscoverPeers(magnet.Trackers[0], peerID, magnet.InfoHash, 1)
+	if err != nil {
+		return err
+	}
+
+	clt, err := client.New(peers[0], peerID, magnet.InfoHash)
+	if err != nil {
+		return err
+	}
+
+	if err := clt.DoHandshake(true); err != nil {
+		return err
+	}
+
+	fmt.Fprintf(c.out, "Peer ID: %x\n", clt.Handshake.PeerID)
 
 	return nil
 }
