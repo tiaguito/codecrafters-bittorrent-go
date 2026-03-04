@@ -10,6 +10,7 @@ import (
 
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/client"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/magnet"
+	"github.com/codecrafters-io/bittorrent-starter-go/internal/messages"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/p2p"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/peers"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/tracker"
@@ -241,6 +242,40 @@ func magnetHandshakeCommand(c *Cmd, args []string) error {
 	}
 
 	fmt.Fprintf(c.out, "Peer ID: %x\n", clt.Handshake.PeerID)
+
+	// TODO: yet to send bitfield request message
+
+	if err := clt.ReadBitfield(); err != nil {
+		return err
+	}
+
+	dict := make(map[string]map[string]uint8)
+	dict["m"] = map[string]uint8{
+		"ut_metadata": uint8(1),
+	}
+
+	var bencodedDict bytes.Buffer
+
+	if err := bencode.Marshal(&bencodedDict, dict); err != nil {
+		return err
+	}
+
+	msg := &messages.Message{
+		ID:      messages.MsgExtension,
+		Payload: []byte{0},
+	}
+
+	msg.Payload = append(msg.Payload, bencodedDict.Bytes()...)
+
+	_, err = clt.Conn.Write(msg.Serialize())
+	if err != nil {
+		return err
+	}
+
+	_, err = clt.Read()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

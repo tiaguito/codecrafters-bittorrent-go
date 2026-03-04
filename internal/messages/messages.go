@@ -18,6 +18,7 @@ const (
 	MsgRequest       messageID = 6
 	MsgPiece         messageID = 7
 	MsgCancel        messageID = 8
+	MsgExtension     messageID = 20
 )
 
 type Message struct {
