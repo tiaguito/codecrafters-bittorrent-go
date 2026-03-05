@@ -217,7 +217,7 @@ func magnetHandshakeCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("usage: magnet_handshake <magnet-link>")
 	}
 
-	magnet, err := magnet.New(args[0])
+	magnt, err := magnet.New(args[0])
 	if err != nil {
 		return err
 	}
@@ -227,12 +227,12 @@ func magnetHandshakeCommand(c *Cmd, args []string) error {
 		return err
 	}
 
-	peers, err := tracker.DiscoverPeers(magnet.Trackers[0], peerID, magnet.InfoHash, 1)
+	peers, err := tracker.DiscoverPeers(magnt.Trackers[0], peerID, magnt.InfoHash, 1)
 	if err != nil {
 		return err
 	}
 
-	clt, err := client.New(peers[0], peerID, magnet.InfoHash)
+	clt, err := client.New(peers[0], peerID, magnt.InfoHash)
 	if err != nil {
 		return err
 	}
@@ -272,10 +272,27 @@ func magnetHandshakeCommand(c *Cmd, args []string) error {
 		return err
 	}
 
-	_, err = clt.Read()
+	resp, err := clt.Read()
 	if err != nil {
 		return err
 	}
+
+	if resp == nil {
+		return fmt.Errorf("expected extension handshake but got %s", resp)
+	}
+
+	if resp.ID != messages.MsgExtension {
+		return fmt.Errorf("expected extension handshake but got ID %d", resp.ID)
+	}
+
+	bencodedValue := bytes.NewReader(resp.Payload[1:])
+	respHandshake := &magnet.MagnetHandshake{}
+	if err := bencode.Unmarshal(bencodedValue, respHandshake); err != nil {
+		return err
+	}
+
+	fmt.Printf("Peer Metadata Extension ID: %v\n", respHandshake.M["ut_metadata"])
+	fmt.Print(respHandshake)
 
 	return nil
 }

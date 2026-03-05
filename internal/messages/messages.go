@@ -119,6 +119,8 @@ func (m *Message) name() string {
 		return "Piece"
 	case MsgCancel:
 		return "Cancel"
+	case MsgExtension:
+		return "Extension"
 	default:
 		return fmt.Sprintf("Unknown#%d", m.ID)
 	}

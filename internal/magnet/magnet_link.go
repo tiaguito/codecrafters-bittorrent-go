@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"strings"
 )
@@ -24,6 +25,17 @@ type Magnet struct {
 	InfoHash    [20]byte
 	DisplayName string
 	Trackers    []string
+}
+
+type MagnetHandshake struct {
+	M            map[string]int `bencode:"m"`
+	MetadataSize int            `bencode:"metadata_size"`
+	P            int            `bencode:"p"`
+	V            string         `bencode:"v"`
+	YourIP       string         `bencode:"yourip"`
+	Ipv6         string         `bencode:"ipv6"`
+	Ipv4         string         `bencode:"ipv4"`
+	Req          int            `bencode:"reqq"`
 }
 
 func New(link string) (*Magnet, error) {
@@ -132,6 +144,24 @@ func (m *Magnet) String() string {
 		str = append(str, fmt.Sprint("Tracker URL: ", trackerURL))
 	}
 	str = append(str, fmt.Sprintf("Info Hash: %x\n", m.InfoHash))
+
+	return strings.Join(str, "\n")
+}
+
+func (m *MagnetHandshake) String() string {
+	var str []string
+
+	str = append(str, fmt.Sprint("m:"))
+	for key, value := range m.M {
+		str = append(str, fmt.Sprintf("\t%s: %d", key, value))
+	}
+	str = append(str, fmt.Sprintf("metadata_size: %d", m.MetadataSize))
+	str = append(str, fmt.Sprintf("reqq: %d", m.Req))
+	str = append(str, fmt.Sprintf("v: %s", m.V))
+	str = append(str, fmt.Sprintf("yourip: %s", net.IP(m.YourIP)))
+	str = append(str, fmt.Sprintf("ipv4: %s", net.IP(m.Ipv4)))
+	str = append(str, fmt.Sprintf("ipv6: %s", net.IP(m.Ipv6)))
+	str = append(str, fmt.Sprintf("p: %d", m.P))
 
 	return strings.Join(str, "\n")
 }
