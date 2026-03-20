@@ -27,7 +27,7 @@ type Magnet struct {
 	Trackers    []string
 }
 
-type MagnetHandshake struct {
+type Handshake struct {
 	M            map[string]int `bencode:"m"`
 	MetadataSize int            `bencode:"metadata_size"`
 	P            int            `bencode:"p"`
@@ -148,7 +148,7 @@ func (m *Magnet) String() string {
 	return strings.Join(str, "\n")
 }
 
-func (m *MagnetHandshake) String() string {
+func (m *Handshake) String() string {
 	var str []string
 
 	str = append(str, fmt.Sprint("m:"))
