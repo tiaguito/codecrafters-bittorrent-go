@@ -243,8 +243,6 @@ func magnetHandshakeCommand(c *Cmd, args []string) error {
 
 	fmt.Fprintf(c.out, "Peer ID: %x\n", clt.Handshake.PeerID)
 
-	// TODO: yet to send bitfield request message
-
 	if err := clt.ReadBitfield(); err != nil {
 		return err
 	}
@@ -286,13 +284,12 @@ func magnetHandshakeCommand(c *Cmd, args []string) error {
 	}
 
 	bencodedValue := bytes.NewReader(resp.Payload[1:])
-	respHandshake := &magnet.MagnetHandshake{}
+	respHandshake := &magnet.Handshake{}
 	if err := bencode.Unmarshal(bencodedValue, respHandshake); err != nil {
 		return err
 	}
 
 	fmt.Printf("Peer Metadata Extension ID: %v\n", respHandshake.M["ut_metadata"])
-	fmt.Print(respHandshake)
 
 	return nil
 }
