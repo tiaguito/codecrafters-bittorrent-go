@@ -3,12 +3,11 @@ package handshake
 import (
 	"fmt"
 	"io"
-
-	"github.com/codecrafters-io/bittorrent-starter-go/internal/torrentfile"
 )
 
 type Handshake struct {
 	Pstr     string
+	Reserved [8]byte
 	InfoHash [20]byte
 	PeerID   [20]byte
 }
@@ -51,13 +50,16 @@ func Read(r io.Reader) (*Handshake, error) {
 		return nil, err
 	}
 
-	var infoHash, peerID [torrentfile.HASHLEN]byte
+	var infoHash, peerID [20]byte
+	var reserved [8]byte
 
-	copy(infoHash[:], handshakeBuf[pstrlen+8:pstrlen+8+torrentfile.HASHLEN])
-	copy(peerID[:], handshakeBuf[pstrlen+8+torrentfile.HASHLEN:])
+	copy(reserved[:], handshakeBuf[:pstrlen+8])
+	copy(infoHash[:], handshakeBuf[pstrlen+8:pstrlen+8+20])
+	copy(peerID[:], handshakeBuf[pstrlen+8+20:])
 
 	h := &Handshake{
 		Pstr:     string(handshakeBuf[0:pstrlen]),
+		Reserved: reserved,
 		InfoHash: infoHash,
 		PeerID:   peerID,
 	}
