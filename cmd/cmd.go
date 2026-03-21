@@ -265,8 +265,7 @@ func magnetHandshakeCommand(c *Cmd, args []string) error {
 
 	msg.Payload = append(msg.Payload, bencodedDict.Bytes()...)
 
-	_, err = clt.Conn.Write(msg.Serialize())
-	if err != nil {
+	if _, err = clt.Conn.Write(msg.Serialize()); err != nil {
 		return err
 	}
 
