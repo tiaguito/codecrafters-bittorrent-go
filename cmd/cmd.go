@@ -113,11 +113,11 @@ func handshakeCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("invalid IP address: %w", err)
 	}
 
-	if err = downloader.CreateClient(peer); err != nil {
+	if err = downloader.CreateClient(peer, true); err != nil {
 		return fmt.Errorf("failed to create client: %w", err)
 	}
 
-	downloader.Clients[peer.String()].DoHandshake(false)
+	downloader.Clients[peer.String()].DoHandshake()
 
 	fmt.Fprintf(c.out, "Peer ID: %x\n", downloader.Clients[peer.String()].Handshake.PeerID)
 	return nil
@@ -133,9 +133,9 @@ func downloadPieceCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("failed to create dowloader: %w", err)
 	}
 
-	downloader.CreateClient(downloader.Peers[0])
+	downloader.CreateClient(downloader.Peers[0], true)
 
-	downloader.Clients[downloader.Peers[0].String()].DoHandshake(false)
+	downloader.Clients[downloader.Peers[0].String()].DoHandshake()
 	downloader.Clients[downloader.Peers[0].String()].ReadBitfield()
 
 	index, err := strconv.Atoi(args[3])
@@ -173,7 +173,7 @@ func downloadCommand(c *Cmd, args []string) error {
 	}
 
 	for _, peer := range downloader.Peers {
-		downloader.CreateClient(peer)
+		downloader.CreateClient(peer, true)
 	}
 
 	downloader.DownloadFile()
@@ -232,13 +232,12 @@ func magnetHandshakeCommand(c *Cmd, args []string) error {
 		return err
 	}
 
-	clt, err := client.New(peers[0], peerID, magnt.InfoHash)
+	clt, err := client.New(peers[0], peerID, magnt.InfoHash, true)
 	if err != nil {
 		return err
 	}
 
-	enableExtensions := true
-	if err := clt.DoHandshake(enableExtensions); err != nil {
+	if err := clt.DoHandshake(); err != nil {
 		return err
 	}
 

@@ -13,15 +13,30 @@ import (
 type Bitfield []byte
 
 type Client struct {
-	Conn      net.Conn
-	Bitfield  Bitfield
-	Choked    bool
-	InfoHash  [20]byte
-	PeerID    [20]byte
-	Handshake *handshake.Handshake
+	Conn              net.Conn
+	Bitfield          Bitfield
+	Choked            bool
+	InfoHash          [20]byte
+	PeerID            [20]byte
+	Handshake         *handshake.Handshake
+	ExtensionsEnabled bool
 }
 
-func (c *Client) DoHandshake(enableExtensions bool) error {
+func New(peer peers.Peer, peerID, infoHash [20]byte, enableExtensions bool) (*Client, error) {
+	conn, err := net.Dial("tcp", peer.String())
+	if err != nil {
+		return nil, err
+	}
+
+	return &Client{
+		Conn:     conn,
+		Choked:   true,
+		InfoHash: infoHash,
+		PeerID:   peerID,
+	}, nil
+}
+
+func (c *Client) DoHandshake() error {
 	h := handshake.New(c.InfoHash, c.PeerID)
 
 	h.EnableExtensions()
@@ -38,7 +53,7 @@ func (c *Client) DoHandshake(enableExtensions bool) error {
 		return fmt.Errorf("failed to received handshake: %w", err)
 	}
 
-	if enableExtensions && !res.SupportsExtensions() {
+	if c.ExtensionsEnabled && !res.SupportsExtensions() {
 		return fmt.Errorf("peer %s does not support extensions", res.PeerID)
 	}
 
@@ -65,20 +80,6 @@ func (c *Client) ReadBitfield() error {
 	c.Bitfield = msg.Payload
 
 	return nil
-}
-
-func New(peer peers.Peer, peerID, infoHash [20]byte) (*Client, error) {
-	conn, err := net.Dial("tcp", peer.String())
-	if err != nil {
-		return nil, err
-	}
-
-	return &Client{
-		Conn:     conn,
-		Choked:   true,
-		InfoHash: infoHash,
-		PeerID:   peerID,
-	}, nil
 }
 
 func (c *Client) Read() (*messages.Message, error) {
