@@ -21,12 +21,16 @@ type Client struct {
 	Handshake *handshake.Handshake
 }
 
-func (c *Client) DoHandshake(enableMagnetExtension bool) error {
+func peerSupportsExtensions(h *handshake.Handshake) bool {
+	return h.Reserved[5]&0x10 != 0
+}
+
+func (c *Client) DoHandshake(enableExtensions bool) error {
 	h := handshake.New(c.InfoHash, c.PeerID)
 
 	// 00000000 00000000 00000000 00000000 00000000 00010000 00000000 00000000
 	// setting the 20th bit from the right to 1
-	if enableMagnetExtension {
+	if enableExtensions {
 		h.Reserved[5] |= 0x10
 	}
 
@@ -40,6 +44,10 @@ func (c *Client) DoHandshake(enableMagnetExtension bool) error {
 	res, err := handshake.Read(c.Conn)
 	if err != nil {
 		return fmt.Errorf("failed to received handshake: %w", err)
+	}
+
+	if enableExtensions && !peerSupportsExtensions(res) {
+		return fmt.Errorf("peer %s does not support extensions", res.PeerID)
 	}
 
 	if !bytes.Equal(res.InfoHash[:], c.InfoHash[:]) {

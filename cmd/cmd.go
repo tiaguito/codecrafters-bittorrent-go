@@ -237,7 +237,8 @@ func magnetHandshakeCommand(c *Cmd, args []string) error {
 		return err
 	}
 
-	if err := clt.DoHandshake(true); err != nil {
+	enableExtensions := true
+	if err := clt.DoHandshake(enableExtensions); err != nil {
 		return err
 	}
 
