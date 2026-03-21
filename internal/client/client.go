@@ -21,18 +21,10 @@ type Client struct {
 	Handshake *handshake.Handshake
 }
 
-func peerSupportsExtensions(h *handshake.Handshake) bool {
-	return h.Reserved[5]&0x10 != 0
-}
-
 func (c *Client) DoHandshake(enableExtensions bool) error {
 	h := handshake.New(c.InfoHash, c.PeerID)
 
-	// 00000000 00000000 00000000 00000000 00000000 00010000 00000000 00000000
-	// setting the 20th bit from the right to 1
-	if enableExtensions {
-		h.Reserved[5] |= 0x10
-	}
+	h.EnableExtensions()
 
 	req := h.Serialize()
 
@@ -46,7 +38,7 @@ func (c *Client) DoHandshake(enableExtensions bool) error {
 		return fmt.Errorf("failed to received handshake: %w", err)
 	}
 
-	if enableExtensions && !peerSupportsExtensions(res) {
+	if enableExtensions && !res.SupportsExtensions() {
 		return fmt.Errorf("peer %s does not support extensions", res.PeerID)
 	}
 

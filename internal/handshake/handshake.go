@@ -65,3 +65,13 @@ func Read(r io.Reader) (*Handshake, error) {
 
 	return h, nil
 }
+
+// 00000000 00000000 00000000 00000000 00000000 00010000 00000000 00000000
+// setting the 20th bit from the right to 1
+func (h *Handshake) EnableExtensions() {
+	h.Reserved[5] |= 0x10
+}
+
+func (h *Handshake) SupportsExtensions() bool {
+	return h.Reserved[5]&0x10 != 0
+}
