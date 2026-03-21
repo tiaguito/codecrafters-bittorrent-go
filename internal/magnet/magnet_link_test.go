@@ -15,7 +15,7 @@ func TestNew(t *testing.T) {
 		"correct magnet link": {
 			input: "magnet:?xt=urn:btih:ad42ce8109f54c99613ce38f9b4d87e70f24a165&dn=magnet1.gif&tr=http%3A%2F%2Fbittorrent-test-tracker.codecrafters.io%2Fannounce",
 			output: &Magnet{
-				InfoHash:    []byte{173, 66, 206, 129, 9, 245, 76, 153, 97, 60, 227, 143, 155, 77, 135, 231, 15, 36, 161, 101},
+				InfoHash:    [20]byte{173, 66, 206, 129, 9, 245, 76, 153, 97, 60, 227, 143, 155, 77, 135, 231, 15, 36, 161, 101},
 				DisplayName: "magnet1.gif",
 				Trackers:    []string{"http://bittorrent-test-tracker.codecrafters.io/announce"},
 			},
@@ -49,7 +49,7 @@ func TestNew(t *testing.T) {
 		"invalid percent encoding": {
 			input: "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567&tr=udp%3A%2F%2Ftracker.example.com%3A80%2Fannounce%ZZ",
 			output: &Magnet{
-				InfoHash:    []byte{1, 35, 69, 103, 137, 171, 205, 239, 1, 35, 69, 103, 137, 171, 205, 239, 1, 35, 69, 103},
+				InfoHash:    [20]byte{1, 35, 69, 103, 137, 171, 205, 239, 1, 35, 69, 103, 137, 171, 205, 239, 1, 35, 69, 103},
 				DisplayName: "",
 				Trackers:    []string(nil),
 			},
@@ -80,7 +80,7 @@ func TestString(t *testing.T) {
 	}{
 		{
 			input: &Magnet{
-				InfoHash:    []byte{173, 66, 206, 129, 9, 245, 76, 153, 97, 60, 227, 143, 155, 77, 135, 231, 15, 36, 161, 101},
+				InfoHash:    [20]byte{173, 66, 206, 129, 9, 245, 76, 153, 97, 60, 227, 143, 155, 77, 135, 231, 15, 36, 161, 101},
 				DisplayName: "",
 				Trackers:    []string{"http://bittorrent-test-tracker.codecrafters.io/announce"},
 			},
