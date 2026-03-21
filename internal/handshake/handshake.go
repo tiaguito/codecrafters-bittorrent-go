@@ -25,7 +25,7 @@ func (h *Handshake) Serialize() []byte {
 	buf[0] = byte(len(h.Pstr))
 	currIdx := 1
 	currIdx += copy(buf[currIdx:], h.Pstr)
-	currIdx += copy(buf[currIdx:], make([]byte, 8))
+	currIdx += copy(buf[currIdx:], h.Reserved[:])
 	currIdx += copy(buf[currIdx:], h.InfoHash[:])
 	currIdx += copy(buf[currIdx:], h.PeerID[:])
 
@@ -34,8 +34,7 @@ func (h *Handshake) Serialize() []byte {
 
 func Read(r io.Reader) (*Handshake, error) {
 	lengthBuf := make([]byte, 1)
-	_, err := io.ReadFull(r, lengthBuf)
-	if err != nil {
+	if _, err := io.ReadFull(r, lengthBuf); err != nil {
 		return nil, err
 	}
 	pstrlen := int(lengthBuf[0])
@@ -45,17 +44,17 @@ func Read(r io.Reader) (*Handshake, error) {
 	}
 
 	handshakeBuf := make([]byte, 48+pstrlen)
-	_, err = io.ReadFull(r, handshakeBuf)
-	if err != nil {
+	if _, err := io.ReadFull(r, handshakeBuf); err != nil {
 		return nil, err
 	}
 
 	var infoHash, peerID [20]byte
 	var reserved [8]byte
 
-	copy(reserved[:], handshakeBuf[:pstrlen+8])
-	copy(infoHash[:], handshakeBuf[pstrlen+8:pstrlen+8+20])
-	copy(peerID[:], handshakeBuf[pstrlen+8+20:])
+	offset := pstrlen
+	offset += copy(reserved[:], handshakeBuf[offset:offset+8])
+	offset += copy(infoHash[:], handshakeBuf[offset:offset+20])
+	copy(peerID[:], handshakeBuf[offset:])
 
 	h := &Handshake{
 		Pstr:     string(handshakeBuf[0:pstrlen]),
