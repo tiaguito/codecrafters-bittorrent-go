@@ -24,13 +24,13 @@ type Client struct {
 func (c *Client) DoHandshake(enableMagnetExtension bool) error {
 	h := handshake.New(c.InfoHash, c.PeerID)
 
-	req := h.Serialize()
-
 	// 00000000 00000000 00000000 00000000 00000000 00010000 00000000 00000000
 	// setting the 20th bit from the right to 1
 	if enableMagnetExtension {
-		req[25] |= 1 << 4
+		h.Reserved[5] |= 0x10
 	}
+
+	req := h.Serialize()
 
 	_, err := c.Conn.Write(req)
 	if err != nil {
