@@ -51,6 +51,7 @@ var commandHandlers = map[string]func(*Cmd, []string) error{
 	"download":         downloadCommand,
 	"magnet_parse":     magnetParseCommand,
 	"magnet_handshake": magnetHandshakeCommand,
+	"magnet_info":      magnetInfoCommand,
 }
 
 func decodeCommand(c *Cmd, args []string) error {
@@ -289,6 +290,108 @@ func magnetHandshakeCommand(c *Cmd, args []string) error {
 	}
 
 	fmt.Printf("Peer Metadata Extension ID: %v\n", respHandshake.M["ut_metadata"])
+
+	return nil
+}
+
+func magnetInfoCommand(c *Cmd, args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: magnet_info <magnet-link>")
+	}
+
+	magnt, err := magnet.New(args[0])
+	if err != nil {
+		return err
+	}
+
+	peerID, err := tracker.GeneratePeerID()
+	if err != nil {
+		return err
+	}
+
+	peers, err := tracker.DiscoverPeers(magnt.Trackers[0], peerID, magnt.InfoHash, 1)
+	if err != nil {
+		return err
+	}
+
+	clt, err := client.New(peers[0], peerID, magnt.InfoHash, true)
+	if err != nil {
+		return err
+	}
+
+	if err := clt.DoHandshake(); err != nil {
+		return err
+	}
+
+	fmt.Fprintf(c.out, "Peer ID: %x\n", clt.Handshake.PeerID)
+
+	if err := clt.ReadBitfield(); err != nil {
+		return err
+	}
+
+	dict := make(map[string]map[string]uint8)
+	dict["m"] = map[string]uint8{
+		"ut_metadata": uint8(1),
+	}
+
+	var bencodedDict bytes.Buffer
+
+	if err := bencode.Marshal(&bencodedDict, dict); err != nil {
+		return err
+	}
+
+	msg := &messages.Message{
+		ID:      messages.MsgExtension,
+		Payload: []byte{0},
+	}
+
+	msg.Payload = append(msg.Payload, bencodedDict.Bytes()...)
+
+	if _, err = clt.Conn.Write(msg.Serialize()); err != nil {
+		return err
+	}
+
+	resp, err := clt.Read()
+	if err != nil {
+		return err
+	}
+
+	if resp == nil {
+		return fmt.Errorf("expected extension handshake but got %s", resp)
+	}
+
+	if resp.ID != messages.MsgExtension {
+		return fmt.Errorf("expected extension handshake but got ID %d", resp.ID)
+	}
+
+	bencodedValue := bytes.NewReader(resp.Payload[1:])
+	respHandshake := &magnet.Handshake{}
+	if err := bencode.Unmarshal(bencodedValue, respHandshake); err != nil {
+		return err
+	}
+
+	metadata_extension_id := respHandshake.M["ut_metadata"]
+
+	msg = &messages.Message{
+		ID:      messages.MsgExtension,
+		Payload: []byte{byte(metadata_extension_id)},
+	}
+
+	reqDict := make(map[string]int)
+	reqDict["msg_type"] = 0
+	reqDict["piece"] = 0
+
+	var bencodedReqDict bytes.Buffer
+
+	if err := bencode.Marshal(&bencodedReqDict, reqDict); err != nil {
+		return err
+	}
+
+	msg.Payload = append(msg.Payload, bencodedReqDict.Bytes()...)
+
+	if _, err = clt.Conn.Write(msg.Serialize()); err != nil {
+		return err
+	}
 
 	return nil
 }
