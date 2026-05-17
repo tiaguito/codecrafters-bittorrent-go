@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/client"
+	"github.com/codecrafters-io/bittorrent-starter-go/internal/magnet"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/messages"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/peers"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/torrentfile"
@@ -16,12 +17,13 @@ type Downloader struct {
 	PeerID       [20]byte
 	Peers        []peers.Peer
 	File         torrentfile.TorrentFile
+	Magnet       magnet.Magnet
 	PieceManager *PieceManager
 	Clients      map[string]*client.Client
 	mu           sync.Mutex
 }
 
-func NewDownloader(path string) (*Downloader, error) {
+func NewTorrentFileDownloader(path string) (*Downloader, error) {
 	tf, err := torrentfile.Open(path)
 	if err != nil {
 		return nil, err
@@ -43,6 +45,32 @@ func NewDownloader(path string) (*Downloader, error) {
 		PieceManager: NewPieceManager(tf),
 		File:         tf,
 		Clients:      make(map[string]*client.Client),
+	}
+
+	return downloader, nil
+}
+
+func NewMagnetLinkDownloader(path string) (*Downloader, error) {
+	magnet, err := magnet.Open(path)
+	if err != nil {
+		return nil, err
+	}
+
+	peerID, err := tracker.GeneratePeerID()
+	if err != nil {
+		return nil, err
+	}
+
+	peers, err := tracker.DiscoverPeers(magnet.Trackers[0], peerID, magnet.InfoHash, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	downloader := &Downloader{
+		PeerID:  peerID,
+		Peers:   peers,
+		Magnet:  magnet,
+		Clients: make(map[string]*client.Client),
 	}
 
 	return downloader, nil

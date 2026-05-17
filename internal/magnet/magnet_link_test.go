@@ -9,12 +9,12 @@ import (
 func TestNew(t *testing.T) {
 	tests := map[string]struct {
 		input  string
-		output *Magnet
+		output Magnet
 		fails  bool
 	}{
 		"correct magnet link": {
 			input: "magnet:?xt=urn:btih:ad42ce8109f54c99613ce38f9b4d87e70f24a165&dn=magnet1.gif&tr=http%3A%2F%2Fbittorrent-test-tracker.codecrafters.io%2Fannounce",
-			output: &Magnet{
+			output: Magnet{
 				InfoHash:    [20]byte{173, 66, 206, 129, 9, 245, 76, 153, 97, 60, 227, 143, 155, 77, 135, 231, 15, 36, 161, 101},
 				DisplayName: "magnet1.gif",
 				Trackers:    []string{"http://bittorrent-test-tracker.codecrafters.io/announce"},
@@ -23,32 +23,32 @@ func TestNew(t *testing.T) {
 		},
 		"wrong scheme": {
 			input:  "http:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567",
-			output: nil,
+			output: Magnet{},
 			fails:  true,
 		},
 		"garbage after scheme": {
 			input:  "magnet:xt=urn:btih:0123456789abcdef0123456789abcdef01234567",
-			output: nil,
+			output: Magnet{},
 			fails:  true,
 		},
 		"missing xt": {
 			input:  "magnet:?dn=Ubuntu+ISO&tr=udp://tracker.opentrackr.org:1337/announce",
-			output: nil,
+			output: Magnet{},
 			fails:  true,
 		},
 		"invalid xt format": {
 			input:  "magnet:?xt=0123456789abcdef0123456789abcdef01234567",
-			output: nil,
+			output: Magnet{},
 			fails:  true,
 		},
 		"invalid infohash length": {
 			input:  "magnet:?xt=urn:btih:12345",
-			output: nil,
+			output: Magnet{},
 			fails:  true,
 		},
 		"invalid percent encoding": {
 			input: "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567&tr=udp%3A%2F%2Ftracker.example.com%3A80%2Fannounce%ZZ",
-			output: &Magnet{
+			output: Magnet{
 				InfoHash:    [20]byte{1, 35, 69, 103, 137, 171, 205, 239, 1, 35, 69, 103, 137, 171, 205, 239, 1, 35, 69, 103},
 				DisplayName: "",
 				Trackers:    []string(nil),
@@ -57,13 +57,13 @@ func TestNew(t *testing.T) {
 		},
 		"duplicate but conflicting xt parameters": {
 			input:  "magnet:?xt=urn:btih:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&xt=urn:btih:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-			output: nil,
+			output: Magnet{},
 			fails:  true,
 		},
 	}
 
 	for _, test := range tests {
-		got, err := New(test.input)
+		got, err := Open(test.input)
 		if test.fails {
 			assert.NotNil(t, err)
 		} else {
@@ -75,11 +75,11 @@ func TestNew(t *testing.T) {
 
 func TestString(t *testing.T) {
 	tests := []struct {
-		input  *Magnet
+		input  Magnet
 		output string
 	}{
 		{
-			input: &Magnet{
+			input: Magnet{
 				InfoHash:    [20]byte{173, 66, 206, 129, 9, 245, 76, 153, 97, 60, 227, 143, 155, 77, 135, 231, 15, 36, 161, 101},
 				DisplayName: "",
 				Trackers:    []string{"http://bittorrent-test-tracker.codecrafters.io/announce"},

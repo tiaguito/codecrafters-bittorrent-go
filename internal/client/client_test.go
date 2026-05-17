@@ -69,7 +69,7 @@ func TestDoHandshake(t *testing.T) {
 			Choked:   true,
 		}
 
-		err := client.DoHandshake(false)
+		err := client.DoHandshake()
 
 		if test.fails {
 			assert.NotNil(t, err)

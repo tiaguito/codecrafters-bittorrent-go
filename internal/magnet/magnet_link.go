@@ -38,27 +38,27 @@ type Handshake struct {
 	Req          int            `bencode:"reqq"`
 }
 
-func New(link string) (*Magnet, error) {
+func Open(link string) (Magnet, error) {
 	u, err := url.Parse(link)
 	if err != nil {
-		return nil, ErrInvalidURI
+		return Magnet{}, ErrInvalidURI
 	}
 
 	if u.Scheme != "magnet" {
-		return nil, ErrInvalidScheme
+		return Magnet{}, ErrInvalidScheme
 	}
 
 	params := u.Query()
 
 	infoHash, err := parseXT(params["xt"])
 	if err != nil {
-		return nil, err
+		return Magnet{}, err
 	}
 
 	trackers := parseTrackers(params["tr"])
 	name := params.Get("dn")
 
-	return &Magnet{
+	return Magnet{
 		InfoHash:    infoHash,
 		DisplayName: name,
 		Trackers:    trackers,
@@ -137,7 +137,7 @@ func parseTrackers(values []string) []string {
 	return out
 }
 
-func (m *Magnet) String() string {
+func (m Magnet) String() string {
 	var str []string
 
 	for _, trackerURL := range m.Trackers {

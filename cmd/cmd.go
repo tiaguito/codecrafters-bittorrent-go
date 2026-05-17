@@ -73,7 +73,7 @@ func infoCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("usage: info <torrent file>")
 	}
 
-	downloader, err := p2p.NewDownloader(args[0])
+	downloader, err := p2p.NewTorrentFileDownloader(args[0])
 	if err != nil {
 		return fmt.Errorf("failed to create dowloader: %w", err)
 	}
@@ -88,7 +88,7 @@ func peersCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("usage: peers <torrent file>")
 	}
 
-	downloader, err := p2p.NewDownloader(args[0])
+	downloader, err := p2p.NewTorrentFileDownloader(args[0])
 	if err != nil {
 		return fmt.Errorf("failed to create dowloader: %w", err)
 	}
@@ -104,7 +104,7 @@ func handshakeCommand(c *Cmd, args []string) error {
 	if len(args) != 2 {
 		return fmt.Errorf("usage: handshake <torrent file> <peer_ip>:<peer_port>")
 	}
-	downloader, err := p2p.NewDownloader(args[0])
+	downloader, err := p2p.NewTorrentFileDownloader(args[0])
 	if err != nil {
 		return fmt.Errorf("failed to create dowloader: %w", err)
 	}
@@ -129,7 +129,7 @@ func downloadPieceCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("usage: download_piece -o <piece destination path> <torrent file> <piece index>")
 	}
 
-	downloader, err := p2p.NewDownloader(args[2])
+	downloader, err := p2p.NewTorrentFileDownloader(args[2])
 	if err != nil {
 		return fmt.Errorf("failed to create dowloader: %w", err)
 	}
@@ -168,7 +168,7 @@ func downloadCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("usage: download -o <destination path> <torrent file>")
 	}
 
-	downloader, err := p2p.NewDownloader(args[2])
+	downloader, err := p2p.NewTorrentFileDownloader(args[2])
 	if err != nil {
 		return fmt.Errorf("failed to create dowloader: %w", err)
 	}
@@ -203,12 +203,12 @@ func magnetParseCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("usage: magnet_parse <magnet-link>")
 	}
 
-	magnet, err := magnet.New(args[0])
+	downloader, err := p2p.NewMagnetLinkDownloader(args[0])
 	if err != nil {
 		return err
 	}
 
-	fmt.Fprint(c.out, magnet)
+	fmt.Fprint(c.out, downloader.Magnet)
 
 	return nil
 }
@@ -218,7 +218,7 @@ func magnetHandshakeCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("usage: magnet_handshake <magnet-link>")
 	}
 
-	magnt, err := magnet.New(args[0])
+	magnt, err := magnet.Open(args[0])
 	if err != nil {
 		return err
 	}
@@ -299,7 +299,7 @@ func magnetInfoCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("usage: magnet_info <magnet-link>")
 	}
 
-	magnt, err := magnet.New(args[0])
+	magnt, err := magnet.Open(args[0])
 	if err != nil {
 		return err
 	}
