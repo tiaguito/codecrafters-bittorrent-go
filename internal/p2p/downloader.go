@@ -16,8 +16,8 @@ import (
 type Downloader struct {
 	PeerID       [20]byte
 	Peers        []peers.Peer
-	File         torrentfile.TorrentFile
-	Magnet       magnet.Magnet
+	File         *torrentfile.TorrentFile
+	Magnet       *magnet.Magnet
 	PieceManager *PieceManager
 	Clients      map[string]*client.Client
 	mu           sync.Mutex
@@ -43,7 +43,7 @@ func NewTorrentFileDownloader(path string) (*Downloader, error) {
 		PeerID:       peerID,
 		Peers:        peers,
 		PieceManager: NewPieceManager(tf),
-		File:         tf,
+		File:         &tf,
 		Clients:      make(map[string]*client.Client),
 	}
 
@@ -69,7 +69,7 @@ func NewMagnetLinkDownloader(path string) (*Downloader, error) {
 	downloader := &Downloader{
 		PeerID:  peerID,
 		Peers:   peers,
-		Magnet:  magnet,
+		Magnet:  &magnet,
 		Clients: make(map[string]*client.Client),
 	}
 
@@ -77,10 +77,23 @@ func NewMagnetLinkDownloader(path string) (*Downloader, error) {
 }
 
 func (d *Downloader) CreateClient(peer peers.Peer, extensionsEnabled bool) error {
-	c, err := client.New(peer, d.PeerID, d.File.InfoHash, extensionsEnabled)
+	if d.File != nil && d.Magnet != nil {
+		return fmt.Errorf("Application doesn't support two download types")
+	}
+
+	var c *client.Client
+	var err error
+
+	if d.File != nil {
+		c, err = client.New(peer, d.PeerID, d.File.InfoHash, extensionsEnabled)
+	} else if d.Magnet != nil {
+		c, err = client.New(peer, d.PeerID, d.Magnet.InfoHash, extensionsEnabled)
+	}
+
 	if err != nil {
 		return err
 	}
+
 	d.Clients[peer.String()] = c
 	return nil
 }

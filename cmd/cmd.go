@@ -8,12 +8,10 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/codecrafters-io/bittorrent-starter-go/internal/client"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/magnet"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/messages"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/p2p"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/peers"
-	"github.com/codecrafters-io/bittorrent-starter-go/internal/tracker"
 	"github.com/jackpal/bencode-go"
 )
 
@@ -218,25 +216,16 @@ func magnetHandshakeCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("usage: magnet_handshake <magnet-link>")
 	}
 
-	magnt, err := magnet.Open(args[0])
+	downloader, err := p2p.NewMagnetLinkDownloader(args[0])
 	if err != nil {
 		return err
 	}
 
-	peerID, err := tracker.GeneratePeerID()
-	if err != nil {
+	if err := downloader.CreateClient(downloader.Peers[0], true); err != nil {
 		return err
 	}
 
-	peers, err := tracker.DiscoverPeers(magnt.Trackers[0], peerID, magnt.InfoHash, 1)
-	if err != nil {
-		return err
-	}
-
-	clt, err := client.New(peers[0], peerID, magnt.InfoHash, true)
-	if err != nil {
-		return err
-	}
+	clt := downloader.Clients[downloader.Peers[0].String()]
 
 	if err := clt.DoHandshake(); err != nil {
 		return err
@@ -299,31 +288,20 @@ func magnetInfoCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("usage: magnet_info <magnet-link>")
 	}
 
-	magnt, err := magnet.Open(args[0])
+	downloader, err := p2p.NewMagnetLinkDownloader(args[0])
 	if err != nil {
 		return err
 	}
 
-	peerID, err := tracker.GeneratePeerID()
-	if err != nil {
+	if err := downloader.CreateClient(downloader.Peers[0], true); err != nil {
 		return err
 	}
 
-	peers, err := tracker.DiscoverPeers(magnt.Trackers[0], peerID, magnt.InfoHash, 1)
-	if err != nil {
-		return err
-	}
-
-	clt, err := client.New(peers[0], peerID, magnt.InfoHash, true)
-	if err != nil {
-		return err
-	}
+	clt := downloader.Clients[downloader.Peers[0].String()]
 
 	if err := clt.DoHandshake(); err != nil {
 		return err
 	}
-
-	fmt.Fprintf(c.out, "Peer ID: %x\n", clt.Handshake.PeerID)
 
 	if err := clt.ReadBitfield(); err != nil {
 		return err
