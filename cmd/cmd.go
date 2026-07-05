@@ -249,7 +249,7 @@ func magnetHandshakeCommand(c *Cmd, args []string) error {
 	}
 
 	msg := &messages.Message{
-		ID:      messages.MsgExtension,
+		ID:      messages.MsgExtended,
 		Payload: []byte{0},
 	}
 
@@ -268,12 +268,12 @@ func magnetHandshakeCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("expected extension handshake but got %s", resp)
 	}
 
-	if resp.ID != messages.MsgExtension {
+	if resp.ID != messages.MsgExtended {
 		return fmt.Errorf("expected extension handshake but got ID %d", resp.ID)
 	}
 
 	bencodedValue := bytes.NewReader(resp.Payload[1:])
-	respHandshake := &magnet.Handshake{}
+	respHandshake := &magnet.ExtendedHandshake{}
 	if err := bencode.Unmarshal(bencodedValue, respHandshake); err != nil {
 		return err
 	}
@@ -319,7 +319,7 @@ func magnetInfoCommand(c *Cmd, args []string) error {
 	}
 
 	msg := &messages.Message{
-		ID:      messages.MsgExtension,
+		ID:      messages.MsgExtended,
 		Payload: []byte{0},
 	}
 
@@ -338,12 +338,12 @@ func magnetInfoCommand(c *Cmd, args []string) error {
 		return fmt.Errorf("expected extension handshake but got %s", resp)
 	}
 
-	if resp.ID != messages.MsgExtension {
+	if resp.ID != messages.MsgExtended {
 		return fmt.Errorf("expected extension handshake but got ID %d", resp.ID)
 	}
 
 	bencodedValue := bytes.NewReader(resp.Payload[1:])
-	respHandshake := &magnet.Handshake{}
+	respHandshake := &magnet.ExtendedHandshake{}
 	if err := bencode.Unmarshal(bencodedValue, respHandshake); err != nil {
 		return err
 	}
@@ -351,7 +351,7 @@ func magnetInfoCommand(c *Cmd, args []string) error {
 	metadata_extension_id := respHandshake.M["ut_metadata"]
 
 	msg = &messages.Message{
-		ID:      messages.MsgExtension,
+		ID:      messages.MsgExtended,
 		Payload: []byte{byte(metadata_extension_id)},
 	}
 

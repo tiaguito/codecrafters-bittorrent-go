@@ -9,6 +9,7 @@ import (
 type messageID uint8
 
 const (
+	// BEP 3
 	MsgChoke         messageID = 0
 	MsgUnchoke       messageID = 1
 	MsgInterested    messageID = 2
@@ -18,7 +19,9 @@ const (
 	MsgRequest       messageID = 6
 	MsgPiece         messageID = 7
 	MsgCancel        messageID = 8
-	MsgExtension     messageID = 20
+
+	// BEP 10
+	MsgExtended messageID = 20
 )
 
 type Message struct {
@@ -119,7 +122,7 @@ func (m *Message) name() string {
 		return "Piece"
 	case MsgCancel:
 		return "Cancel"
-	case MsgExtension:
+	case MsgExtended:
 		return "Extension"
 	default:
 		return fmt.Sprintf("Unknown#%d", m.ID)
