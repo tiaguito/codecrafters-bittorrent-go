@@ -7,15 +7,14 @@ import (
 	"os"
 	"strings"
 
+	infohash "github.com/codecrafters-io/bittorrent-starter-go/internal/types"
 	"github.com/jackpal/bencode-go"
 )
 
-const HASHLEN int = 20
-
 type TorrentFile struct {
 	Announce    string
-	InfoHash    [HASHLEN]byte
-	PieceHashes [][HASHLEN]byte
+	InfoHash    infohash.T
+	PieceHashes []infohash.T
 	PieceLength int
 	Length      int
 	Name        string
@@ -48,28 +47,27 @@ func Open(path string) (TorrentFile, error) {
 	return bto.toTorrentFile()
 }
 
-func (i *bencodeInfo) hash() ([HASHLEN]byte, error) {
+func (i *bencodeInfo) hash() (infohash.T, error) {
 	var buf bytes.Buffer
 	err := bencode.Marshal(&buf, *i)
 	if err != nil {
-		return [HASHLEN]byte{}, err
+		return infohash.T{}, err
 	}
 	h := sha1.Sum(buf.Bytes())
 	return h, nil
 }
 
-func (i *bencodeInfo) splitPieceHashes() ([][HASHLEN]byte, error) {
-	hashLen := HASHLEN
+func (i *bencodeInfo) splitPieceHashes() ([]infohash.T, error) {
 	buf := []byte(i.Pieces)
 
-	if len(buf)%hashLen != 0 {
+	if len(buf)%infohash.Size != 0 {
 		return nil, fmt.Errorf("received malformed pieces of length %d", len(buf))
 	}
-	numHashes := len(buf) / hashLen
-	hashes := make([][20]byte, numHashes)
+	numHashes := len(buf) / infohash.Size
+	hashes := make([]infohash.T, numHashes)
 
 	for i := 0; i < numHashes; i++ {
-		copy(hashes[i][:], buf[i*hashLen:(i+1)*hashLen])
+		copy(hashes[i][:], buf[i*infohash.Size:(i+1)*infohash.Size])
 	}
 	return hashes, nil
 }
@@ -98,7 +96,7 @@ func (t TorrentFile) Info() string {
 	var str []string
 	str = append(str, fmt.Sprintf("Tracker URL: %s", t.Announce))
 	str = append(str, fmt.Sprintf("Length: %d", t.Length))
-	str = append(str, fmt.Sprintf("Info Hash: %x", t.InfoHash))
+	str = append(str, fmt.Sprintf("Info Hash: %s", t.InfoHash))
 	str = append(str, fmt.Sprintf("Piece Length: %d", t.PieceLength))
 	str = append(str, fmt.Sprint("Piece Hashes:"))
 	for _, hash := range t.PieceHashes {

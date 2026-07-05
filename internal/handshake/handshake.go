@@ -7,8 +7,8 @@ import (
 
 type Handshake struct {
 	Pstr     string
-	Reserved [8]byte
-	InfoHash [20]byte
+	Reserved PeerExtensionBits
+	InfoHash infohash.T
 	PeerID   [20]byte
 }
 

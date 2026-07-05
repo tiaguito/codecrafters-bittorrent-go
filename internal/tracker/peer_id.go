@@ -3,14 +3,14 @@ package tracker
 import (
 	"crypto/rand"
 
-	"github.com/codecrafters-io/bittorrent-starter-go/internal/torrentfile"
+	infohash "github.com/codecrafters-io/bittorrent-starter-go/internal/types"
 )
 
 func GeneratePeerID() ([20]byte, error) {
-	var peerID [torrentfile.HASHLEN]byte
+	var peerID [infohash.Size]byte
 	_, err := rand.Read(peerID[:])
 	if err != nil {
-		return [torrentfile.HASHLEN]byte{}, err
+		return [infohash.Size]byte{}, err
 	}
 	return peerID, nil
 }

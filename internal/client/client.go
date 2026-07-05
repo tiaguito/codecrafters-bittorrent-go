@@ -8,6 +8,7 @@ import (
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/handshake"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/messages"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/peers"
+	infohash "github.com/codecrafters-io/bittorrent-starter-go/internal/types"
 )
 
 type Bitfield []byte
@@ -16,13 +17,13 @@ type Client struct {
 	Conn              net.Conn
 	Bitfield          Bitfield
 	Choked            bool
-	InfoHash          [20]byte
+	InfoHash          infohash.T
 	PeerID            [20]byte
 	Handshake         *handshake.Handshake
 	ExtensionsEnabled bool
 }
 
-func New(peer peers.Peer, peerID, infoHash [20]byte, enableExtensions bool) (*Client, error) {
+func New(peer peers.Peer, peerID, infoHash infohash.T, enableExtensions bool) (*Client, error) {
 	conn, err := net.Dial("tcp", peer.String())
 	if err != nil {
 		return nil, err
@@ -39,7 +40,7 @@ func New(peer peers.Peer, peerID, infoHash [20]byte, enableExtensions bool) (*Cl
 func (c *Client) DoHandshake() error {
 	h := handshake.New(c.InfoHash, c.PeerID)
 
-	h.EnableExtensions()
+	h.Reserved.SetBit(handshake.ExtensionBitLtep, true)
 
 	req := h.Serialize()
 
@@ -53,7 +54,7 @@ func (c *Client) DoHandshake() error {
 		return fmt.Errorf("failed to received handshake: %w", err)
 	}
 
-	if c.ExtensionsEnabled && !res.SupportsExtensions() {
+	if c.ExtensionsEnabled && !res.Reserved.SupportsExtended() {
 		return fmt.Errorf("peer %s does not support extensions", res.PeerID)
 	}
 
