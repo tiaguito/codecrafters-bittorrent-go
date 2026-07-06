@@ -3,7 +3,42 @@ package handshake
 import (
 	"fmt"
 	"io"
+
+	infohash "github.com/codecrafters-io/bittorrent-starter-go/internal/types"
 )
+
+const (
+	// LibTorrent Extension Protocol, http://www.bittorrent.org/beps/bep_0010.html
+	ExtensionBitLtep = 20
+)
+
+type (
+	ExtensionBit      uint
+	PeerExtensionBits [8]byte
+)
+
+func NewPeerExtensionBytes(bits ...ExtensionBit) (ret PeerExtensionBits) {
+	for _, b := range bits {
+		ret.SetBit(b, true)
+	}
+	return
+}
+
+func (pex PeerExtensionBits) SupportsExtended() bool {
+	return pex.GetBit(ExtensionBitLtep)
+}
+
+func (pex *PeerExtensionBits) SetBit(bit ExtensionBit, on bool) {
+	if on {
+		pex[7-bit/8] |= 1 << (bit % 8)
+	} else {
+		pex[7-bit/8] &^= 1 << (bit % 8)
+	}
+}
+
+func (pex PeerExtensionBits) GetBit(bit ExtensionBit) bool {
+	return pex[7-bit/8]&(1<<(bit%8)) != 0
+}
 
 type Handshake struct {
 	Pstr     string
@@ -12,7 +47,7 @@ type Handshake struct {
 	PeerID   [20]byte
 }
 
-func New(infoHash, peerID [20]byte) *Handshake {
+func New(infoHash infohash.T, peerID [20]byte) *Handshake {
 	return &Handshake{
 		Pstr:     "BitTorrent protocol",
 		InfoHash: infoHash,
@@ -48,7 +83,8 @@ func Read(r io.Reader) (*Handshake, error) {
 		return nil, err
 	}
 
-	var infoHash, peerID [20]byte
+	var infoHash infohash.T
+	var peerID [20]byte
 	var reserved [8]byte
 
 	offset := pstrlen
@@ -64,14 +100,4 @@ func Read(r io.Reader) (*Handshake, error) {
 	}
 
 	return h, nil
-}
-
-// 00000000 00000000 00000000 00000000 00000000 00010000 00000000 00000000
-// setting the 20th bit from the right to 1
-func (h *Handshake) EnableExtensions() {
-	h.Reserved[5] |= 0x10
-}
-
-func (h *Handshake) SupportsExtensions() bool {
-	return h.Reserved[5]&0x10 != 0
 }
