@@ -78,7 +78,7 @@ func NewMagnetLinkDownloader(path string) (*Downloader, error) {
 
 func (d *Downloader) CreateClient(peer peers.Peer, extensionsEnabled bool) error {
 	if d.File != nil && d.Magnet != nil {
-		return fmt.Errorf("Application doesn't support two download types")
+		return fmt.Errorf("application only supports two download types")
 	}
 
 	var c *client.Client
