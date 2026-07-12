@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/codecrafters-io/bittorrent-starter-go/internal/magnet"
 	infohash "github.com/codecrafters-io/bittorrent-starter-go/internal/types"
 	"github.com/jackpal/bencode-go"
 )
@@ -45,6 +46,20 @@ func Open(path string) (TorrentFile, error) {
 		return TorrentFile{}, err
 	}
 	return bto.toTorrentFile()
+}
+
+func ToTorrentFile(m magnet.Magnet, payload []byte) (TorrentFile, error) {
+	bi := bencodeInfo{}
+
+	if err := bencode.Unmarshal(bytes.NewReader(payload), &bi); err != nil {
+		return TorrentFile{}, fmt.Errorf("error unmarshalling bencode stream")
+	}
+
+	t, err := bi.toTorrentFile()
+
+	t.Announce = m.Trackers[0]
+
+	return t, err
 }
 
 func (i *bencodeInfo) hash() (infohash.T, error) {
@@ -92,6 +107,27 @@ func (bto *bencodeTorrent) toTorrentFile() (TorrentFile, error) {
 	return t, nil
 }
 
+func (bi *bencodeInfo) toTorrentFile() (TorrentFile, error) {
+	infoHash, err := bi.hash()
+	if err != nil {
+		return TorrentFile{}, err
+	}
+	pieceHashes, err := bi.splitPieceHashes()
+	if err != nil {
+		return TorrentFile{}, err
+	}
+
+	t := TorrentFile{
+		InfoHash:    infoHash,
+		PieceHashes: pieceHashes,
+		PieceLength: bi.PieceLength,
+		Length:      bi.Length,
+		Name:        bi.Name,
+	}
+
+	return t, nil
+}
+
 func (t TorrentFile) Info() string {
 	var str []string
 	str = append(str, fmt.Sprintf("Tracker URL: %s", t.Announce))
@@ -108,4 +144,18 @@ func (t TorrentFile) Info() string {
 
 func (t TorrentFile) NumPieces() int {
 	return len(t.PieceHashes)
+}
+
+func (bi bencodeInfo) String() string {
+	var str []string
+	str = append(str, fmt.Sprintf("Piece Length: %d", bi.PieceLength))
+	pieceHashes, _ := bi.splitPieceHashes()
+	str = append(str, fmt.Sprintln("Piece Hashes: "))
+	for pieceHash := range pieceHashes {
+		str = append(str, fmt.Sprintln(pieceHash))
+	}
+	str = append(str, fmt.Sprintf("Name: %s", bi.Name))
+	str = append(str, fmt.Sprintf("Length: %d", bi.Length))
+
+	return strings.Join(str, "\n")
 }

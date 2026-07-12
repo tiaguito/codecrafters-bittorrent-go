@@ -12,6 +12,7 @@ import (
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/messages"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/p2p"
 	"github.com/codecrafters-io/bittorrent-starter-go/internal/peers"
+	"github.com/codecrafters-io/bittorrent-starter-go/internal/torrentfile"
 	"github.com/jackpal/bencode-go"
 )
 
@@ -370,6 +371,42 @@ func magnetInfoCommand(c *Cmd, args []string) error {
 	if _, err = clt.Conn.Write(msg.Serialize()); err != nil {
 		return err
 	}
+
+	resp, err = clt.Read()
+	if err != nil {
+		return err
+	}
+
+	if resp == nil {
+		return fmt.Errorf("expected extension message response but got %s", resp)
+	}
+
+	if resp.ID != messages.MsgExtended {
+		return fmt.Errorf("exptected extension message response but got %d", resp.ID)
+	}
+
+	payload := resp.Payload[1:]
+
+	var bencodedDictResp messages.ExtendedMetadataRequestMsg
+	if err := bencode.Unmarshal(bytes.NewReader(payload), &bencodedDictResp); err != nil {
+		return fmt.Errorf("error unmarshalling bencode: %s", err)
+	}
+
+	if bencodedDictResp.Type != messages.DataMetadataExtensionMsgType {
+		return fmt.Errorf("expected data type extension message but got %d", bencodedDictResp.Type)
+	}
+
+	begin := len(payload) - bencodedDictResp.PieceSize()
+	if begin < 0 || begin >= len(resp.Payload) {
+		return fmt.Errorf("data has bad offset in payload: %d", begin)
+	}
+
+	t, err := torrentfile.ToTorrentFile(*downloader.Magnet, payload[begin:])
+	if err != nil {
+		return fmt.Errorf("error generating a .torrent file: %s", err)
+	}
+
+	fmt.Fprintln(c.out, t.Info())
 
 	return nil
 }

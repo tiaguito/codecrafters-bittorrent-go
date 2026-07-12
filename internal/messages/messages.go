@@ -24,6 +24,14 @@ const (
 	MsgExtended messageID = 20
 )
 
+const (
+	HandshakeExtendedID = 0
+
+	RequestMetadataExtensionMsgType = 0
+	DataMetadataExtensionMsgType    = 1
+	RejectMetadataExtensionMsgType  = 2
+)
+
 type Message struct {
 	ID      messageID
 	Payload []byte
